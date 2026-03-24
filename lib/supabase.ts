@@ -21,4 +21,5 @@ export type Post = {
   content: string;
   category: "공지" | "일정" | "행사" | "동아리";
   created_at: string;
+  image_url: string | null;
 };

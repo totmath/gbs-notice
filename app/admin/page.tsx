@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<Post["category"]>("공지");
+  const [image, setImage] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,15 +21,34 @@ export default function AdminPage() {
     e.preventDefault();
     setSubmitting(true);
     setStatus("");
+
+    let image_url: string | null = null;
+
+    if (image) {
+      const ext = image.name.split(".").pop();
+      const path = `${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("post-images")
+        .upload(path, image);
+      if (uploadError) {
+        setStatus("오류: 이미지 업로드 실패 - " + uploadError.message);
+        setSubmitting(false);
+        return;
+      }
+      const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+      image_url = data.publicUrl;
+    }
+
     const { error } = await supabase
       .from("posts")
-      .insert({ title, content, category });
+      .insert({ title, content, category, image_url });
     setSubmitting(false);
     if (error) {
       setStatus("오류: " + error.message);
     } else {
       setTitle("");
       setContent("");
+      setImage(null);
       setStatus("공지가 등록되었습니다!");
     }
   }
@@ -68,6 +88,12 @@ export default function AdminPage() {
           onChange={(e) => setTitle(e.target.value)}
           className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"
           required
+        />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-400"
         />
         <textarea
           placeholder="내용"

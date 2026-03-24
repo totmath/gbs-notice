@@ -27,6 +27,13 @@ export default function PostCard({ post }: { post: Post }) {
       <p className="text-sm text-slate-400 whitespace-pre-wrap">
         {post.content}
       </p>
+      {post.image_url && (
+        <img
+          src={post.image_url}
+          alt=""
+          className="w-full rounded-lg mt-2 max-h-80 object-cover"
+        />
+      )}
     </div>
   );
 }
