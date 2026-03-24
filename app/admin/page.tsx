@@ -28,14 +28,14 @@ export default function AdminPage() {
       const ext = image.name.split(".").pop();
       const path = `${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from("post-images")
+        .from("post-image")
         .upload(path, image);
       if (uploadError) {
         setStatus("오류: 이미지 업로드 실패 - " + uploadError.message);
         setSubmitting(false);
         return;
       }
-      const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+      const { data } = supabase.storage.from("post-image").getPublicUrl(path);
       image_url = data.publicUrl;
     }
 
