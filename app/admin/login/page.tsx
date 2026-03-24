@@ -9,13 +9,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    setSubmitting(false);
     if (error) {
       setError("이메일 또는 비밀번호가 틀렸습니다.");
     } else {
@@ -46,9 +49,10 @@ export default function LoginPage() {
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <button
           type="submit"
-          className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 font-medium"
+          disabled={submitting}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg py-2 font-medium"
         >
-          로그인
+          {submitting ? "로그인 중..." : "로그인"}
         </button>
       </form>
     </div>

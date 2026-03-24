@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, Post } from "@/lib/supabase";
 
@@ -13,12 +13,6 @@ export default function AdminPage() {
   const [category, setCategory] = useState<Post["category"]>("공지");
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push("/admin/login");
-    });
-  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,7 +75,13 @@ export default function AdminPage() {
           className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm resize-none"
           required
         />
-        {status && <p className="text-sm text-indigo-300">{status}</p>}
+        {status && (
+          <p
+            className={`text-sm ${status.startsWith("오류") ? "text-red-400" : "text-green-400"}`}
+          >
+            {status}
+          </p>
+        )}
         <button
           type="submit"
           disabled={submitting}
