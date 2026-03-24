@@ -22,7 +22,7 @@ export default function LoginPage() {
     });
     setSubmitting(false);
     if (error) {
-      setError("이메일 또는 비밀번호가 틀렸습니다.");
+      setError(error.message);
     } else {
       router.push("/admin");
     }
