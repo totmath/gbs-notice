@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, Post } from "@/lib/supabase";
 
@@ -16,6 +16,24 @@ export default function AdminPage() {
   const [image, setImage] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState<Post["category"]>("공지");
+
+  async function loadPosts() {
+    const { data } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setPosts(data ?? []);
+  }
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +68,34 @@ export default function AdminPage() {
       setContent("");
       setImage(null);
       setStatus("공지가 등록되었습니다!");
+      loadPosts();
     }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("정말 삭제할까요?")) return;
+    await supabase.from("posts").delete().eq("id", id);
+    loadPosts();
+  }
+
+  function startEdit(post: Post) {
+    setEditingId(post.id);
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditCategory(post.category);
+  }
+
+  async function handleEdit(id: string) {
+    await supabase
+      .from("posts")
+      .update({
+        title: editTitle,
+        content: editContent,
+        category: editCategory,
+      })
+      .eq("id", id);
+    setEditingId(null);
+    loadPosts();
   }
 
   async function handleLogout() {
@@ -59,8 +104,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div className="max-w-lg mx-auto space-y-8">
+      <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">공지 등록</h2>
         <button
           onClick={handleLogout}
@@ -69,6 +114,7 @@ export default function AdminPage() {
           로그아웃
         </button>
       </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <select
           value={category}
@@ -118,6 +164,90 @@ export default function AdminPage() {
           {submitting ? "등록 중..." : "등록"}
         </button>
       </form>
+
+      <div>
+        <h3 className="text-lg font-bold mb-3 text-slate-300">등록된 공지</h3>
+        <div className="space-y-3">
+          {posts.map((post) =>
+            editingId === post.id ? (
+              <div
+                key={post.id}
+                className="bg-slate-900 border border-indigo-500 rounded-xl p-4 space-y-3"
+              >
+                <select
+                  value={editCategory}
+                  onChange={(e) =>
+                    setEditCategory(e.target.value as Post["category"])
+                  }
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm"
+                />
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={4}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm resize-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(post.id)}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 rounded-lg py-1.5 text-sm font-medium"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 rounded-lg py-1.5 text-sm"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={post.id}
+                className="bg-slate-900 border border-slate-800 rounded-xl p-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-xs text-slate-500 mr-2">
+                      {post.category}
+                    </span>
+                    <span className="text-sm font-medium">{post.title}</span>
+                  </div>
+                  <div className="flex gap-2 ml-2 shrink-0">
+                    <button
+                      onClick={() => startEdit(post)}
+                      className="text-xs text-indigo-400 hover:text-indigo-300"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDelete(post.id)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  {post.content}
+                </p>
+              </div>
+            ),
+          )}
+        </div>
+      </div>
     </div>
   );
 }
