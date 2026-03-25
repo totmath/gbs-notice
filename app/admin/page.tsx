@@ -17,6 +17,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [author, setAuthor] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -35,6 +36,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadPosts();
+    const saved = localStorage.getItem("gbs-author");
+    if (saved) setAuthor(saved);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,9 +62,10 @@ export default function AdminPage() {
       image_url = data.publicUrl;
     }
 
+    localStorage.setItem("gbs-author", author);
     const { error } = await supabase
       .from("posts")
-      .insert({ title, content, category, image_url });
+      .insert({ title, content, category, image_url, author: author || null });
     setSubmitting(false);
     if (error) {
       setStatus("오류: " + error.message);
@@ -146,6 +150,13 @@ export default function AdminPage() {
             </option>
           ))}
         </select>
+        <input
+          type="text"
+          placeholder="작성자 이름"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"
+        />
         <input
           type="text"
           placeholder="제목"

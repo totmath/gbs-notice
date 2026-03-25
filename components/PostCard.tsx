@@ -22,6 +22,9 @@ export default function PostCard({ post }: { post: Post }) {
           {post.category}
         </span>
         <span className="text-xs text-slate-500">{date}</span>
+        {post.author && (
+          <span className="text-xs text-slate-500">· {post.author}</span>
+        )}
       </div>
       <h2 className="font-semibold text-slate-100">{post.title}</h2>
       <p className="text-sm text-slate-400 whitespace-pre-wrap">
