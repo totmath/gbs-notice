@@ -22,6 +22,8 @@ export default function AdminPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState<Post["category"]>("공지");
+  const [editImage, setEditImage] = useState<File | null>(null);
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
 
   async function loadPosts() {
     const { data } = await supabase
@@ -83,15 +85,32 @@ export default function AdminPage() {
     setEditTitle(post.title);
     setEditContent(post.content);
     setEditCategory(post.category);
+    setEditImage(null);
+    setEditImageUrl(post.image_url);
   }
 
   async function handleEdit(id: string) {
+    let image_url = editImageUrl;
+
+    if (editImage) {
+      const ext = editImage.name.split(".").pop();
+      const path = `${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("post-image")
+        .upload(path, editImage);
+      if (!uploadError) {
+        const { data } = supabase.storage.from("post-image").getPublicUrl(path);
+        image_url = data.publicUrl;
+      }
+    }
+
     await supabase
       .from("posts")
       .update({
         title: editTitle,
         content: editContent,
         category: editCategory,
+        image_url,
       })
       .eq("id", id);
     setEditingId(null);
@@ -197,6 +216,28 @@ export default function AdminPage() {
                   onChange={(e) => setEditContent(e.target.value)}
                   rows={4}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm resize-none"
+                />
+                {editImageUrl && (
+                  <div className="relative">
+                    <img
+                      src={editImageUrl}
+                      alt=""
+                      className="w-full rounded-lg max-h-40 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditImageUrl(null)}
+                      className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setEditImage(e.target.files?.[0] ?? null)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-400"
                 />
                 <div className="flex gap-2">
                   <button
