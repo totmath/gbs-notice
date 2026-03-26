@@ -1,13 +1,20 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, Post } from "@/lib/supabase";
 import PostCard from "@/components/PostCard";
 import CategoryFilter from "@/components/CategoryFilter";
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const category =
+    (searchParams.get("category") as Post["category"] | "전체") ?? "전체";
+
   const [posts, setPosts] = useState<Post[]>([]);
-  const [category, setCategory] = useState<Post["category"] | "전체">("전체");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
 
@@ -37,9 +44,17 @@ export default function HomePage() {
     load();
   }, [category]);
 
+  function handleCategoryChange(cat: Post["category"] | "전체") {
+    if (cat === "전체") {
+      router.push("/");
+    } else {
+      router.push(`/?category=${cat}`);
+    }
+  }
+
   return (
     <>
-      <CategoryFilter selected={category} onChange={setCategory} />
+      <CategoryFilter selected={category} onChange={handleCategoryChange} />
       {loading ? (
         <p className="text-center text-slate-500 py-10">불러오는 중...</p>
       ) : fetchError ? (
