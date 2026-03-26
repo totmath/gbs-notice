@@ -1,14 +1,12 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, Post } from "@/lib/supabase";
 import PostCard from "@/components/PostCard";
 import CategoryFilter from "@/components/CategoryFilter";
 
-export default function HomePage() {
+function Feed() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const category =
@@ -71,5 +69,17 @@ export default function HomePage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <p className="text-center text-slate-500 py-10">불러오는 중...</p>
+      }
+    >
+      <Feed />
+    </Suspense>
   );
 }
