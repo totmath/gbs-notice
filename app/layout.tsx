@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,9 +29,11 @@ export default function RootLayout({
     <html lang="ko">
       <body className="bg-slate-950 text-slate-100 min-h-screen">
         <header className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 py-3">
-          <h1 className="text-lg font-bold text-indigo-400">
-            경기북과학고 공지
-          </h1>
+          <Link href="/">
+            <h1 className="text-lg font-bold text-indigo-400 hover:text-indigo-300">
+              경기북과학고 공지
+            </h1>
+          </Link>
         </header>
         <main className="max-w-2xl mx-auto px-4 py-6">{children}</main>
       </body>
