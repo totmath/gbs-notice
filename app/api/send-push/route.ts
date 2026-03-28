@@ -42,7 +42,25 @@ export async function POST(req: NextRequest) {
     process.env.VAPID_PRIVATE_KEY!,
   );
 
-  const { title, body } = await req.json();
+  const { title, body, postId } = await req.json();
+
+  // 알림 히스토리 저장 (승인된 모든 유저)
+  const { data: approvedUsers } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("approved", true);
+
+  if (approvedUsers && approvedUsers.length > 0) {
+    await supabaseAdmin.from("notifications").insert(
+      approvedUsers.map((u) => ({
+        user_id: u.id,
+        title,
+        body,
+        post_id: postId ?? null,
+      })),
+    );
+  }
+
   const { data: subs } = await supabaseAdmin
     .from("push_subscriptions")
     .select("subscription");

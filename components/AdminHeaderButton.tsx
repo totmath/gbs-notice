@@ -11,6 +11,7 @@ export default function AdminHeaderButton() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadFeedback, setUnreadFeedback] = useState(0);
+  const [unreadNotif, setUnreadNotif] = useState(0);
 
   useEffect(() => {
     async function checkUser(userId: string | undefined) {
@@ -43,18 +44,30 @@ export default function AdminHeaderButton() {
     if (!isAdmin) return;
 
     async function fetchCounts() {
-      const [{ count: pending }, { count: feedback }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("approved", false),
-        supabase
-          .from("feedback")
-          .select("*", { count: "exact", head: true })
-          .eq("is_read", false),
-      ]);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const [{ count: pending }, { count: feedback }, { count: notif }] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("approved", false),
+          supabase
+            .from("feedback")
+            .select("*", { count: "exact", head: true })
+            .eq("is_read", false),
+          user
+            ? supabase
+                .from("notifications")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", user.id)
+                .eq("is_read", false)
+            : Promise.resolve({ count: 0 }),
+        ]);
       setPendingCount(pending ?? 0);
       setUnreadFeedback(feedback ?? 0);
+      setUnreadNotif(notif ?? 0);
     }
 
     fetchCounts();
@@ -69,6 +82,11 @@ export default function AdminHeaderButton() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "feedback" },
+        () => fetchCounts(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications" },
         () => fetchCounts(),
       )
       .subscribe();
@@ -120,6 +138,26 @@ export default function AdminHeaderButton() {
           )}
         </Link>
       )}
+      <Link href="/notifications" className="relative" style={btnStyle}>
+        🔔
+        {unreadNotif > 0 && (
+          <span
+            className="absolute flex items-center justify-center text-white font-bold"
+            style={{
+              top: "-6px",
+              right: "-6px",
+              fontSize: "9px",
+              minWidth: "15px",
+              height: "15px",
+              borderRadius: "9999px",
+              background: "#6366f1",
+              padding: "0 3px",
+            }}
+          >
+            {unreadNotif}
+          </span>
+        )}
+      </Link>
       <Link href="/feedback" style={btnStyle}>
         건의하기
       </Link>

@@ -54,6 +54,33 @@ export type Comment = {
   created_at: string;
 };
 
+export type Bookmark = {
+  id: string;
+  user_id: string;
+  post_id: string | null;
+  board_post_id: string | null;
+  created_at: string;
+};
+
+export type Reaction = {
+  id: string;
+  user_id: string;
+  post_id: string | null;
+  board_post_id: string | null;
+  emoji: string;
+  created_at: string;
+};
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  post_id: string | null;
+  created_at: string;
+  is_read: boolean;
+};
+
 export type Feedback = {
   id: string;
   user_id: string;

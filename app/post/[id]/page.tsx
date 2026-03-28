@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, Post, Comment } from "@/lib/supabase";
+import BookmarkButton from "@/components/BookmarkButton";
+import ReactionBar from "@/components/ReactionBar";
+import FilePreview from "@/components/FilePreview";
 
 const BADGE_CLASS: Record<Post["category"], string> = {
   공지: "badge badge-notice",
@@ -186,6 +189,10 @@ export default function PostDetailPage() {
         </h1>
       </div>
 
+      <div className="flex items-center gap-2">
+        <BookmarkButton postId={id} />
+      </div>
+
       {post.image_url && (
         <div
           className="overflow-hidden rounded-xl"
@@ -213,51 +220,10 @@ export default function PostDetailPage() {
       </p>
 
       {post.files && post.files.length > 0 && (
-        <div
-          className="rounded-xl p-4 space-y-2.5"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border-subtle)",
-          }}
-        >
-          <p
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "var(--muted-fg)" }}
-          >
-            첨부파일
-          </p>
-          <div className="space-y-1.5">
-            {post.files.map((f, i) => (
-              <a
-                key={i}
-                href={f.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download={f.name}
-                className="flex items-center gap-2 text-sm transition-colors"
-                style={{ color: "#818cf8" }}
-              >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 13 13"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M2 9.5V11h9V9.5M6.5 2v7m0 0-2.5-2.5M6.5 9l2.5-2.5"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {f.name}
-              </a>
-            ))}
-          </div>
-        </div>
+        <FilePreview files={post.files} />
       )}
+
+      <ReactionBar postId={id} />
 
       {/* 댓글 */}
       <div className="space-y-4 pt-2">

@@ -74,15 +74,19 @@ export default function NewPostPage() {
     const uploadedFiles = await uploadFiles(files);
     const image_url =
       uploadedFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
-    const { error: insertError } = await supabase.from("posts").insert({
-      title,
-      content,
-      category,
-      image_url,
-      author: authorLabel,
-      files: uploadedFiles,
-      pinned,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("posts")
+      .insert({
+        title,
+        content,
+        category,
+        image_url,
+        author: authorLabel,
+        files: uploadedFiles,
+        pinned,
+      })
+      .select("id")
+      .single();
     setSubmitting(false);
     if (insertError) {
       setError(insertError.message);
@@ -96,7 +100,11 @@ export default function NewPostPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ title, body: `${category} · ${authorLabel}` }),
+          body: JSON.stringify({
+            title,
+            body: `${category} · ${authorLabel}`,
+            postId: inserted?.id,
+          }),
         }).catch(() => {});
       });
       router.push("/");
