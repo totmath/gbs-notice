@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, Post, PostFile } from "@/lib/supabase";
 
-const CATEGORIES: Post["category"][] = ["공지", "동아리"];
+const NOTICE_CATEGORIES: Post["category"][] = ["공지", "동아리"];
+type FormCategory = Post["category"] | "자유게시판";
 
 async function uploadFiles(fileList: File[]): Promise<PostFile[]> {
   const uploaded: PostFile[] = [];
@@ -26,10 +27,12 @@ async function uploadFiles(fileList: File[]): Promise<PostFile[]> {
 export default function NewPostPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState("");
   const [authorLabel, setAuthorLabel] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<Post["category"]>("공지");
+  const [category, setCategory] = useState<FormCategory>("자유게시판");
   const [files, setFiles] = useState<File[]>([]);
   const [pinned, setPinned] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -54,10 +57,10 @@ export default function NewPostPage() {
         router.replace("/pending");
         return;
       }
-      if (!profile?.is_admin) {
-        router.replace("/");
-        return;
-      }
+      const adminStatus = profile.is_admin ?? false;
+      setIsAdmin(adminStatus);
+      setUserId(user.id);
+      if (adminStatus) setCategory("공지");
       setAuthorLabel(
         profile.student_id
           ? `${profile.student_id} ${profile.name}`
@@ -73,6 +76,21 @@ export default function NewPostPage() {
     setSubmitting(true);
     setError("");
     const uploadedFiles = await uploadFiles(files);
+
+    if (category === "자유게시판") {
+      const { error: insertError } = await supabase.from("board_posts").insert({
+        title,
+        content,
+        user_id: userId,
+        author: authorLabel,
+        files: uploadedFiles,
+      });
+      setSubmitting(false);
+      if (insertError) setError(insertError.message);
+      else router.push("/");
+      return;
+    }
+
     const image_url =
       uploadedFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
     const { data: inserted, error: insertError } = await supabase
@@ -93,7 +111,6 @@ export default function NewPostPage() {
     if (insertError) {
       setError(insertError.message);
     } else {
-      // 예약 발행이면 푸시 알림 미전송
       if (!scheduledAt || new Date(scheduledAt) <= new Date()) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) return;
@@ -139,14 +156,16 @@ export default function NewPostPage() {
           </label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as Post["category"])}
+            onChange={(e) => setCategory(e.target.value as FormCategory)}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {isAdmin &&
+              NOTICE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            <option value="자유게시판">자유게시판</option>
           </select>
         </div>
 
@@ -209,35 +228,40 @@ export default function NewPostPage() {
           )}
         </div>
 
-        <label className="flex items-center gap-2.5 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={pinned}
-            onChange={(e) => setPinned(e.target.checked)}
-            className="w-4 h-4 accent-indigo-500"
-          />
-          <span className="text-sm" style={{ color: "var(--muted-fg)" }}>
-            중요 공지로 상단 고정
-          </span>
-        </label>
+        {category !== "자유게시판" && (
+          <>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={pinned}
+                onChange={(e) => setPinned(e.target.checked)}
+                className="w-4 h-4 accent-indigo-500"
+              />
+              <span className="text-sm" style={{ color: "var(--muted-fg)" }}>
+                중요 공지로 상단 고정
+              </span>
+            </label>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
-            예약 발행 (선택)
-          </label>
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            min={new Date().toISOString().slice(0, 16)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-          />
-          {scheduledAt && (
-            <p className="text-xs" style={{ color: "#f59e0b" }}>
-              ⏰ {new Date(scheduledAt).toLocaleString("ko-KR")}에 공개됩니다
-            </p>
-          )}
-        </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
+                예약 발행 (선택)
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              />
+              {scheduledAt && (
+                <p className="text-xs" style={{ color: "#f59e0b" }}>
+                  ⏰ {new Date(scheduledAt).toLocaleString("ko-KR")}에
+                  공개됩니다
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 

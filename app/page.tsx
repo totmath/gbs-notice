@@ -40,6 +40,7 @@ function Feed() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [adminBadge, setAdminBadge] = useState(0);
   const [noticeExpanded, setNoticeExpanded] = useState(false);
   const [search, setSearch] = useState("");
@@ -117,6 +118,7 @@ function Feed() {
       }
       const adminStatus = profile.is_admin ?? false;
       setIsAdmin(adminStatus);
+      setLoggedIn(true);
       if (adminStatus) {
         const [{ count: pending }, { count: feedback }] = await Promise.all([
           supabase
@@ -357,38 +359,40 @@ function Feed() {
         </p>
       )}
 
-      {isAdmin && (
+      {loggedIn && (
         <>
-          <button
-            onClick={() => router.push("/admin")}
-            className="fixed right-6 z-30 flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full"
-            style={{
-              bottom: "5rem",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              color: "var(--foreground)",
-            }}
-          >
-            계정관리
-            {adminBadge > 0 && (
-              <span
-                className="absolute flex items-center justify-center text-white font-bold"
-                style={{
-                  top: "-6px",
-                  right: "-6px",
-                  fontSize: "9px",
-                  minWidth: "15px",
-                  height: "15px",
-                  borderRadius: "9999px",
-                  background: "#f87171",
-                  padding: "0 3px",
-                }}
-              >
-                {adminBadge}
-              </span>
-            )}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/admin")}
+              className="fixed right-6 z-30 flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full"
+              style={{
+                bottom: "5rem",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                color: "var(--foreground)",
+              }}
+            >
+              계정관리
+              {adminBadge > 0 && (
+                <span
+                  className="absolute flex items-center justify-center text-white font-bold"
+                  style={{
+                    top: "-6px",
+                    right: "-6px",
+                    fontSize: "9px",
+                    minWidth: "15px",
+                    height: "15px",
+                    borderRadius: "9999px",
+                    background: "#f87171",
+                    padding: "0 3px",
+                  }}
+                >
+                  {adminBadge}
+                </span>
+              )}
+            </button>
+          )}
           <button
             onClick={() => router.push("/post/new")}
             className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
