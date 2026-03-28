@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase, BoardPost } from "@/lib/supabase";
 import CategoryFilter from "@/components/CategoryFilter";
 
