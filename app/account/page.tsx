@@ -5,14 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-type Theme = "dark" | "dim" | "light";
-
-const THEMES: { value: Theme; label: string; desc: string }[] = [
-  { value: "dark", label: "다크", desc: "어두운 테마" },
-  { value: "dim", label: "딤", desc: "중간 밝기" },
-  { value: "light", label: "라이트", desc: "밝은 테마" },
-];
-
 export default function AccountPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -20,7 +12,6 @@ export default function AccountPage() {
   const [studentId, setStudentId] = useState("");
   const [username, setUsername] = useState("");
   const [userId, setUserId] = useState("");
-  const [theme, setTheme] = useState<Theme>("dark");
   const [pushGranted, setPushGranted] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
 
@@ -31,16 +22,7 @@ export default function AccountPage() {
   const [pwStatus, setPwStatus] = useState("");
   const [pwSubmitting, setPwSubmitting] = useState(false);
 
-  function applyTheme(t: Theme) {
-    setTheme(t);
-    localStorage.setItem("gbs-theme", t);
-    document.documentElement.setAttribute("data-theme", t);
-  }
-
   useEffect(() => {
-    const saved = (localStorage.getItem("gbs-theme") as Theme) || "dark";
-    setTheme(saved);
-
     async function load() {
       const {
         data: { user },
@@ -293,42 +275,6 @@ export default function AccountPage() {
             {pwSubmitting ? "변경 중..." : "변경하기"}
           </button>
         </form>
-      </div>
-
-      {/* 테마 선택 */}
-      <div className="card p-5 space-y-3">
-        <h2
-          className="text-sm font-semibold"
-          style={{ color: "var(--foreground)" }}
-        >
-          테마
-        </h2>
-        <div className="grid grid-cols-3 gap-2">
-          {THEMES.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => applyTheme(t.value)}
-              className="py-2.5 rounded-lg text-sm font-medium transition-all"
-              style={
-                theme === t.value
-                  ? {
-                      background:
-                        "linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)",
-                      color: "#fff",
-                      border: "1px solid transparent",
-                    }
-                  : {
-                      background: "var(--surface-2)",
-                      color: "var(--muted-fg)",
-                      border: "1px solid var(--border-subtle)",
-                    }
-              }
-            >
-              <div>{t.label}</div>
-              <div className="text-xs opacity-70 mt-0.5">{t.desc}</div>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* 푸시 알림 */}
