@@ -361,7 +361,7 @@ function Feed() {
         <>
           <button
             onClick={() => router.push("/admin")}
-            className="fixed right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full relative"
+            className="fixed right-6 z-30 flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full"
             style={{
               bottom: "5rem",
               background: "var(--surface-2)",
