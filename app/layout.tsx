@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import AdminHeaderButton from "@/components/AdminHeaderButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -57,7 +58,10 @@ export default function RootLayout({
               </span>
             </h1>
           </Link>
-          <AdminHeaderButton />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <AdminHeaderButton />
+          </div>
         </header>
         <main className="max-w-2xl mx-auto px-4 py-7">{children}</main>
       </body>

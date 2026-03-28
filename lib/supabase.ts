@@ -32,6 +32,7 @@ export type Post = {
   files: PostFile[];
   pinned: boolean;
   view_count: number;
+  scheduled_at: string | null;
 };
 
 export type BoardPost = {

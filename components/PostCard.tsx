@@ -11,6 +11,7 @@ type CardPost = {
   pinned: boolean;
   image_url?: string | null;
   _source?: "notice" | "board";
+  scheduled_at?: string | null;
 };
 
 const BADGE_CLASS: Record<string, string> = {
@@ -37,6 +38,17 @@ export default function PostCard({ post }: { post: CardPost }) {
           {post.pinned && (
             <span className="text-xs font-bold" style={{ color: "#f59e0b" }}>
               📌
+            </span>
+          )}
+          {post.scheduled_at && new Date(post.scheduled_at) > new Date() && (
+            <span
+              className="text-xs font-semibold px-1.5 py-0.5 rounded"
+              style={{
+                background: "rgba(245,158,11,0.12)",
+                color: "#f59e0b",
+              }}
+            >
+              예약됨
             </span>
           )}
           <span className={BADGE_CLASS[post.category] ?? "badge"}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, Post, PostFile, BoardPost } from "@/lib/supabase";
 import PostCard from "@/components/PostCard";
@@ -46,6 +46,8 @@ function Feed() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
 
   // 공지 등록 폼
   const [readNoticeIds, setReadNoticeIds] = useState<Set<string>>(new Set());
@@ -76,6 +78,25 @@ function Feed() {
   }, []);
 
   useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
+    if (!bottomRef.current || !hasMore) return;
+    const el = bottomRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !loadingMoreRef.current) {
+          handleLoadMore();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, page, search]);
+
+  useEffect(() => {
     async function init() {
       const {
         data: { user },
@@ -93,7 +114,8 @@ function Feed() {
         router.push("/pending");
         return;
       }
-      setIsAdmin(profile.is_admin ?? false);
+      const adminStatus = profile.is_admin ?? false;
+      setIsAdmin(adminStatus);
       const key = `gbs-read-notices-${user.id}`;
       setReadKey(key);
       const readSaved = localStorage.getItem(key);
@@ -107,12 +129,17 @@ function Feed() {
       setSearch("");
       setSearchInput("");
       setPage(1);
-      await loadPosts(1, "");
+      await loadPosts(1, "", false, adminStatus);
     }
     init();
   }, [category]);
 
-  async function loadPosts(pageNum: number, q: string, append = false) {
+  async function loadPosts(
+    pageNum: number,
+    q: string,
+    append = false,
+    admin = isAdmin,
+  ) {
     if (!append) setLoading(true);
     else setLoadingMore(true);
     setFetchError(false);
@@ -126,6 +153,10 @@ function Feed() {
         .order("created_at", { ascending: false })
         .range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE);
       query = query.eq("category", category);
+      if (!admin) {
+        const now = new Date().toISOString();
+        query = query.or(`scheduled_at.is.null,scheduled_at.lte.${now}`);
+      }
       if (q) query = query.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
       const { data, error } = await query;
       if (error) {
@@ -144,6 +175,10 @@ function Feed() {
     } else {
       // 전체: 공지 + 자유게시판 합산
       let noticeQ = supabase.from("posts").select("*");
+      if (!admin) {
+        const now = new Date().toISOString();
+        noticeQ = noticeQ.or(`scheduled_at.is.null,scheduled_at.lte.${now}`);
+      }
       let boardQ = supabase.from("board_posts").select("*");
       if (q) {
         noticeQ = noticeQ.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
@@ -749,15 +784,13 @@ function Feed() {
                 </div>
               ),
             )}
-          {hasMore && (
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="btn-secondary w-full py-2.5 mt-2"
-            >
-              {loadingMore ? "불러오는 중..." : "더 보기"}
-            </button>
-          )}
+          <div ref={bottomRef} className="py-3 text-center">
+            {loadingMore && (
+              <p className="text-sm" style={{ color: "var(--muted-fg)" }}>
+                불러오는 중...
+              </p>
+            )}
+          </div>
         </div>
       )}
     </>

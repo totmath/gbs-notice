@@ -32,6 +32,7 @@ export default function NewPostPage() {
   const [category, setCategory] = useState<Post["category"]>("공지");
   const [files, setFiles] = useState<File[]>([]);
   const [pinned, setPinned] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -84,6 +85,7 @@ export default function NewPostPage() {
         author: authorLabel,
         files: uploadedFiles,
         pinned,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       })
       .select("id")
       .single();
@@ -91,22 +93,24 @@ export default function NewPostPage() {
     if (insertError) {
       setError(insertError.message);
     } else {
-      // 푸시 알림 전송 (관리자 토큰 포함)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) return;
-        fetch("/api/send-push", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            title,
-            body: `${category} · ${authorLabel}`,
-            postId: inserted?.id,
-          }),
-        }).catch(() => {});
-      });
+      // 예약 발행이면 푸시 알림 미전송
+      if (!scheduledAt || new Date(scheduledAt) <= new Date()) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) return;
+          fetch("/api/send-push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              title,
+              body: `${category} · ${authorLabel}`,
+              postId: inserted?.id,
+            }),
+          }).catch(() => {});
+        });
+      }
       router.push("/");
     }
   }
@@ -216,6 +220,24 @@ export default function NewPostPage() {
             중요 공지로 상단 고정
           </span>
         </label>
+
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
+            예약 발행 (선택)
+          </label>
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            min={new Date().toISOString().slice(0, 16)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+          />
+          {scheduledAt && (
+            <p className="text-xs" style={{ color: "#f59e0b" }}>
+              ⏰ {new Date(scheduledAt).toLocaleString("ko-KR")}에 공개됩니다
+            </p>
+          )}
+        </div>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
