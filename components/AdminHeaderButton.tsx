@@ -238,7 +238,10 @@ export default function AdminHeaderButton() {
           display: "flex",
           flexDirection: "column",
           transform: panelOpen ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+          transition:
+            "transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0s linear " +
+            (panelOpen ? "0s" : "0.3s"),
+          visibility: panelOpen ? "visible" : "hidden",
         }}
       >
         {/* 패널 헤더 */}
