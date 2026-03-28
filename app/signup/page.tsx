@@ -61,15 +61,6 @@ export default function SignupPage() {
       <div className="w-full max-w-sm space-y-7">
         {/* 상단 로고 영역 */}
         <div className="text-center space-y-2">
-          <div
-            className="inline-flex items-center justify-center w-12 h-12 rounded-2xl text-white font-black text-lg mx-auto"
-            style={{
-              background: "linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)",
-              boxShadow: "0 4px 16px rgba(99, 102, 241, 0.35)",
-            }}
-          >
-            경
-          </div>
           <h1
             className="text-xl font-bold"
             style={{ color: "var(--foreground)" }}
