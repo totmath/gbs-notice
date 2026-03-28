@@ -40,34 +40,51 @@ export default function AdminHeaderButton() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 모든 로그인 유저: 알림 뱃지
+  useEffect(() => {
+    if (!loggedIn) return;
+    async function fetchNotifCount() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+      setUnreadNotif(count ?? 0);
+    }
+    fetchNotifCount();
+    const channel = supabase
+      .channel("notif-count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications" },
+        fetchNotifCount,
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loggedIn]);
+
   useEffect(() => {
     if (!isAdmin) return;
 
     async function fetchCounts() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const [{ count: pending }, { count: feedback }, { count: notif }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("approved", false),
-          supabase
-            .from("feedback")
-            .select("*", { count: "exact", head: true })
-            .eq("is_read", false),
-          user
-            ? supabase
-                .from("notifications")
-                .select("*", { count: "exact", head: true })
-                .eq("user_id", user.id)
-                .eq("is_read", false)
-            : Promise.resolve({ count: 0 }),
-        ]);
+      const [{ count: pending }, { count: feedback }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("approved", false),
+        supabase
+          .from("feedback")
+          .select("*", { count: "exact", head: true })
+          .eq("is_read", false),
+      ]);
       setPendingCount(pending ?? 0);
       setUnreadFeedback(feedback ?? 0);
-      setUnreadNotif(notif ?? 0);
     }
 
     fetchCounts();
@@ -82,11 +99,6 @@ export default function AdminHeaderButton() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "feedback" },
-        () => fetchCounts(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
         () => fetchCounts(),
       )
       .subscribe();
