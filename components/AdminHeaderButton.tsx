@@ -128,28 +128,6 @@ export default function AdminHeaderButton() {
 
   return (
     <div className="flex items-center gap-2">
-      {isAdmin && (
-        <Link href="/admin" className="relative" style={btnStyle}>
-          계정관리
-          {pendingCount + unreadFeedback > 0 && (
-            <span
-              className="absolute flex items-center justify-center text-white font-bold"
-              style={{
-                top: "-6px",
-                right: "-6px",
-                fontSize: "9px",
-                minWidth: "15px",
-                height: "15px",
-                borderRadius: "9999px",
-                background: "#f87171",
-                padding: "0 3px",
-              }}
-            >
-              {pendingCount + unreadFeedback}
-            </span>
-          )}
-        </Link>
-      )}
       <Link href="/notifications" className="relative" style={btnStyle}>
         🔔
         {unreadNotif > 0 && (

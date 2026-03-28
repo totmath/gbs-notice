@@ -40,6 +40,7 @@ function Feed() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminBadge, setAdminBadge] = useState(0);
   const [noticeExpanded, setNoticeExpanded] = useState(false);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -116,6 +117,19 @@ function Feed() {
       }
       const adminStatus = profile.is_admin ?? false;
       setIsAdmin(adminStatus);
+      if (adminStatus) {
+        const [{ count: pending }, { count: feedback }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("approved", false),
+          supabase
+            .from("feedback")
+            .select("*", { count: "exact", head: true })
+            .eq("is_read", false),
+        ]);
+        setAdminBadge((pending ?? 0) + (feedback ?? 0));
+      }
       const key = `gbs-read-notices-${user.id}`;
       setReadKey(key);
       const readSaved = localStorage.getItem(key);
@@ -344,30 +358,62 @@ function Feed() {
       )}
 
       {isAdmin && (
-        <button
-          onClick={() => router.push("/post/new")}
-          className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
-          style={{
-            background: "#6366f1",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-          }}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 15 15"
-            fill="none"
-            aria-hidden
+        <>
+          <button
+            onClick={() => router.push("/admin")}
+            className="fixed right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full relative"
+            style={{
+              bottom: "5rem",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              color: "var(--foreground)",
+            }}
           >
-            <path
-              d="M7.5 1v13M1 7.5h13"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          글 올리기
-        </button>
+            계정관리
+            {adminBadge > 0 && (
+              <span
+                className="absolute flex items-center justify-center text-white font-bold"
+                style={{
+                  top: "-6px",
+                  right: "-6px",
+                  fontSize: "9px",
+                  minWidth: "15px",
+                  height: "15px",
+                  borderRadius: "9999px",
+                  background: "#f87171",
+                  padding: "0 3px",
+                }}
+              >
+                {adminBadge}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => router.push("/post/new")}
+            className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
+            style={{
+              background: "#6366f1",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 15 15"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M7.5 1v13M1 7.5h13"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            글 올리기
+          </button>
+        </>
       )}
 
       <NoticeFormPanel
