@@ -15,6 +15,12 @@ export const supabase = new Proxy({} as SupabaseClient, {
   },
 });
 
+export type PostFile = {
+  name: string;
+  url: string;
+  type: string;
+};
+
 export type Post = {
   id: string;
   title: string;
@@ -23,4 +29,46 @@ export type Post = {
   created_at: string;
   image_url: string | null;
   author: string | null;
+  files: PostFile[];
+  pinned: boolean;
+  view_count: number;
+};
+
+export type BoardPost = {
+  id: string;
+  user_id: string;
+  author: string;
+  title: string;
+  content: string;
+  created_at: string;
+  view_count: number;
+  files: PostFile[];
+};
+
+export type Comment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  author: string;
+  content: string;
+  created_at: string;
+};
+
+export type Feedback = {
+  id: string;
+  user_id: string;
+  author: string;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+};
+
+export type Profile = {
+  id: string;
+  name: string;
+  email: string;
+  student_id: string | null;
+  approved: boolean;
+  is_admin: boolean;
+  created_at: string;
 };

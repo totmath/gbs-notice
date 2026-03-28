@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import AdminHeaderButton from "@/components/AdminHeaderButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,15 +28,38 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="bg-slate-950 text-slate-100 min-h-screen">
-        <header className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 py-3">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var t=localStorage.getItem('gbs-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()`,
+        }}
+      />
+      <body
+        className="min-h-screen"
+        style={{ background: "var(--background)", color: "var(--foreground)" }}
+      >
+        <header
+          className="sticky top-0 z-40 px-5 py-3 flex justify-between items-center"
+          style={{
+            background: "rgba(9, 9, 15, 0.85)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderBottom: "1px solid var(--border-subtle)",
+          }}
+        >
           <Link href="/">
-            <h1 className="text-lg font-bold text-indigo-400 hover:text-indigo-300">
-              경기북과학고 공지
+            <h1
+              className="text-base font-semibold tracking-tight"
+              style={{ color: "var(--foreground)" }}
+            >
+              경기북과학고
+              <span style={{ color: "var(--primary)", marginLeft: "0.25rem" }}>
+                공지
+              </span>
             </h1>
           </Link>
+          <AdminHeaderButton />
         </header>
-        <main className="max-w-2xl mx-auto px-4 py-6">{children}</main>
+        <main className="max-w-2xl mx-auto px-4 py-7">{children}</main>
       </body>
     </html>
   );
