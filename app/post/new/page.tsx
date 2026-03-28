@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, Post, PostFile } from "@/lib/supabase";
 
-const NOTICE_CATEGORIES: Post["category"][] = ["공지", "동아리"];
+const NOTICE_CATEGORIES: Post["category"][] = ["공지", "일정", "동아리"];
 type FormCategory = Post["category"] | "자유게시판";
 
 async function uploadFiles(fileList: File[]): Promise<PostFile[]> {

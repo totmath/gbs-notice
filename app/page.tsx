@@ -11,7 +11,7 @@ type FeedItem =
   | (Post & { _source: "notice" })
   | (BoardPost & { _source: "board"; category: "자유게시판"; pinned: false });
 
-const CATEGORIES: Post["category"][] = ["공지", "동아리"];
+const CATEGORIES: Post["category"][] = ["공지", "일정", "동아리"];
 const PAGE_SIZE = 10;
 
 async function uploadFiles(fileList: File[]): Promise<PostFile[]> {

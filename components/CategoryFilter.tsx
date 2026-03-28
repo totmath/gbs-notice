@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 
-const CATEGORIES = ["전체", "공지", "동아리"] as const;
+const CATEGORIES = ["전체", "공지", "일정", "동아리"] as const;
 
 const getHref = (cat: string) =>
   cat === "전체" ? "/" : `/?category=${encodeURIComponent(cat)}`;
