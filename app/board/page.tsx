@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase, BoardPost } from "@/lib/supabase";
 import CategoryFilter from "@/components/CategoryFilter";
 
@@ -80,17 +79,9 @@ export default function BoardPage() {
       <Suspense fallback={null}>
         <CategoryFilter />
       </Suspense>
-      <div className="flex items-center justify-between">
-        <h1
-          className="text-xl font-bold"
-          style={{ color: "var(--foreground)" }}
-        >
-          자유게시판
-        </h1>
-        <Link href="/board/new" className="btn-primary px-4 py-1.5 text-sm">
-          글쓰기
-        </Link>
-      </div>
+      <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>
+        자유게시판
+      </h1>
 
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
