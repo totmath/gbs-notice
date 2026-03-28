@@ -186,18 +186,18 @@ export default function AdminHeaderButton() {
             fill="none"
             aria-hidden
           >
+            <path
+              d="M7.2 1.5h3.6l.4 2c.55.2 1.05.5 1.5.87l1.9-.8 1.8 3.1-1.5 1.28c.06.28.1.57.1.85s-.04.57-.1.85l1.5 1.28-1.8 3.1-1.9-.8c-.45.37-.95.67-1.5.87l-.4 2H7.2l-.4-2a5.5 5.5 0 0 1-1.5-.87l-1.9.8-1.8-3.1 1.5-1.28A5.4 5.4 0 0 1 2.9 9c0-.28.04-.57.1-.85L1.5 6.87l1.8-3.1 1.9.8c.45-.37.95-.67 1.5-.87l.4-2Z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
             <circle
               cx="9"
               cy="9"
-              r="2.5"
+              r="2.3"
               stroke="currentColor"
-              strokeWidth="1.4"
-            />
-            <path
-              d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
+              strokeWidth="1.3"
             />
           </svg>
         </button>
