@@ -13,6 +13,13 @@ export default function AdminPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newStudentId, setNewStudentId] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createSuccess, setCreateSuccess] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -106,6 +113,41 @@ export default function AdminPage() {
       body: JSON.stringify({ userId: id }),
     });
     loadMembers();
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError("");
+    setCreateSuccess(false);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/create-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({
+        username: newUsername,
+        password: newPassword,
+        name: newName,
+        studentId: newStudentId,
+      }),
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) {
+      setCreateError(data.error ?? "생성 실패");
+    } else {
+      setCreateSuccess(true);
+      setNewUsername("");
+      setNewPassword("");
+      setNewName("");
+      setNewStudentId("");
+      loadMembers();
+    }
   }
 
   async function handleToggleAdmin(id: string, current: boolean) {
@@ -227,71 +269,142 @@ export default function AdminPage() {
 
       {/* 회원 관리 */}
       {tab === "members" && (
-        <div className="space-y-2">
-          {members.length === 0 ? (
-            <p className="state-text">회원이 없습니다.</p>
-          ) : (
-            members.map((user) => (
-              <div
-                key={user.id}
-                className="flex justify-between items-center px-4 py-3 card"
-              >
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p
-                      className="text-sm font-medium"
-                      style={{ color: "var(--foreground)" }}
-                    >
-                      {user.student_id
-                        ? `${user.student_id} ${user.name}`
-                        : user.name}
+        <div className="space-y-4">
+          {/* 계정 생성 폼 */}
+          <form
+            onSubmit={handleCreateUser}
+            className="rounded-xl p-4 space-y-2.5"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "var(--muted-fg)" }}
+            >
+              계정 만들기
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="학번 (선택)"
+                value={newStudentId}
+                onChange={(e) => setNewStudentId(e.target.value.trim())}
+                className="input-base text-sm"
+              />
+              <input
+                type="text"
+                placeholder="이름 (선택)"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="input-base text-sm"
+              />
+            </div>
+            <input
+              type="text"
+              placeholder="아이디 *"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value.trim())}
+              required
+              className="input-base text-sm"
+            />
+            <input
+              type="password"
+              placeholder="비밀번호 *"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={6}
+              className="input-base text-sm"
+            />
+            {createError && (
+              <p className="text-xs" style={{ color: "#f87171" }}>
+                {createError}
+              </p>
+            )}
+            {createSuccess && (
+              <p className="text-xs" style={{ color: "#34d399" }}>
+                계정이 생성됐어요!
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={creating}
+              className="btn-primary w-full py-2 text-sm"
+            >
+              {creating ? "생성 중..." : "계정 만들기"}
+            </button>
+          </form>
+
+          <div className="space-y-2">
+            {members.length === 0 ? (
+              <p className="state-text">회원이 없습니다.</p>
+            ) : (
+              members.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex justify-between items-center px-4 py-3 card"
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: "var(--foreground)" }}
+                      >
+                        {user.student_id
+                          ? `${user.student_id} ${user.name}`
+                          : user.name}
+                      </p>
+                      {user.is_admin && (
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded-sm font-medium"
+                          style={{
+                            background: "rgba(99,102,241,0.12)",
+                            color: "#818cf8",
+                            border: "1px solid rgba(99,102,241,0.2)",
+                          }}
+                        >
+                          관리자
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--muted-fg)" }}>
+                      {user.email}
                     </p>
-                    {user.is_admin && (
-                      <span
-                        className="text-xs px-1.5 py-0.5 rounded-sm font-medium"
+                  </div>
+                  <div className="flex gap-1.5">
+                    {user.id !== currentUserId && (
+                      <button
+                        onClick={() =>
+                          handleToggleAdmin(user.id, user.is_admin)
+                        }
+                        className="text-xs px-2.5 py-1 rounded-md font-medium"
                         style={{
-                          background: "rgba(99,102,241,0.12)",
+                          background: "rgba(99,102,241,0.1)",
                           color: "#818cf8",
                           border: "1px solid rgba(99,102,241,0.2)",
                         }}
                       >
-                        관리자
-                      </span>
+                        {user.is_admin ? "권한 해제" : "관리자"}
+                      </button>
                     )}
-                  </div>
-                  <p className="text-xs" style={{ color: "var(--muted-fg)" }}>
-                    {user.email}
-                  </p>
-                </div>
-                <div className="flex gap-1.5">
-                  {user.id !== currentUserId && (
                     <button
-                      onClick={() => handleToggleAdmin(user.id, user.is_admin)}
+                      onClick={() => handleDelete(user.id)}
                       className="text-xs px-2.5 py-1 rounded-md font-medium"
                       style={{
-                        background: "rgba(99,102,241,0.1)",
-                        color: "#818cf8",
-                        border: "1px solid rgba(99,102,241,0.2)",
+                        background: "rgba(248,113,113,0.08)",
+                        color: "#f87171",
+                        border: "1px solid rgba(248,113,113,0.2)",
                       }}
                     >
-                      {user.is_admin ? "권한 해제" : "관리자"}
+                      삭제
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="text-xs px-2.5 py-1 rounded-md font-medium"
-                    style={{
-                      background: "rgba(248,113,113,0.08)",
-                      color: "#f87171",
-                      border: "1px solid rgba(248,113,113,0.2)",
-                    }}
-                  >
-                    삭제
-                  </button>
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
 
