@@ -53,9 +53,6 @@ export default function RootLayout({
               style={{ color: "var(--foreground)" }}
             >
               경기북과학고
-              <span style={{ color: "var(--primary)", marginLeft: "0.25rem" }}>
-                공지
-              </span>
             </h1>
           </Link>
           <div className="flex items-center gap-1">
