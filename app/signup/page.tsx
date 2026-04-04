@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase";
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [studentId, setStudentId] = useState("");
   const [grade, setGrade] = useState("");
   const [classNum, setClassNum] = useState("");
   const [username, setUsername] = useState("");
@@ -44,7 +43,7 @@ export default function SignupPage() {
     const { error: profileError } = await supabase.from("profiles").insert({
       id: data.user.id,
       name,
-      student_id: studentId,
+      student_id: null,
       grade: grade ? Number(grade) : null,
       class_num: classNum ? Number(classNum) : null,
       email: username,
@@ -77,14 +76,6 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-2.5">
-          <input
-            type="text"
-            placeholder="학번"
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value.replace(/\s/g, ""))}
-            required
-            className="input-base"
-          />
           <input
             type="text"
             placeholder="이름"
