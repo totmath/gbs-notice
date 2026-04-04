@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [grade, setGrade] = useState("");
+  const [classNum, setClassNum] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,6 +34,8 @@ export default function SignupPage() {
         username: username.trim(),
         password,
         name: name.trim(),
+        grade: grade ? Number(grade) : null,
+        class_num: classNum ? Number(classNum) : null,
       }),
     });
 
@@ -81,6 +85,32 @@ export default function SignupPage() {
             required
             className="input-base"
           />
+          <div className="flex gap-2">
+            <select
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              required
+              className="input-base flex-1"
+            >
+              <option value="">학년</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
+            </select>
+            <select
+              value={classNum}
+              onChange={(e) => setClassNum(e.target.value)}
+              required
+              className="input-base flex-1"
+            >
+              <option value="">반</option>
+              <option value="1">1반</option>
+              <option value="2">2반</option>
+              <option value="3">3반</option>
+              <option value="4">4반</option>
+              <option value="5">5반</option>
+            </select>
+          </div>
           <input
             type="text"
             placeholder="아이디 (영문·숫자·_ / 3~30자)"
