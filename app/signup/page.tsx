@@ -107,6 +107,7 @@ export default function SignupPage() {
               <option value="2">2반</option>
               <option value="3">3반</option>
               <option value="4">4반</option>
+              <option value="5">5반</option>
             </select>
           </div>
           <input
