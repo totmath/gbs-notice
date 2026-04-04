@@ -58,7 +58,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/pending");
+    router.push("/");
   }
 
   return (

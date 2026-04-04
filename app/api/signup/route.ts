@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     grade: grade ?? null,
     class_num: class_num ?? null,
     email: username,
-    approved: false,
+    approved: true,
     can_post: true,
     can_view: true,
   });
