@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 
-const CATEGORIES = ["전체", "공지", "일정", "동아리"] as const;
+const CATEGORIES = ["전체", "공지"] as const;
 
 const getHref = (cat: string) =>
   cat === "전체" ? "/" : `/?category=${encodeURIComponent(cat)}`;
@@ -10,11 +10,10 @@ const getHref = (cat: string) =>
 const btnStyle = (isSelected: boolean): React.CSSProperties =>
   isSelected
     ? {
-        background: "linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)",
+        background: "#6366f1",
         color: "#fff",
         borderRadius: "6px",
         border: "1px solid transparent",
-        boxShadow: "0 1px 6px rgba(99, 102, 241, 0.35)",
         display: "inline-block",
         padding: "4px 12px",
         fontSize: "12px",

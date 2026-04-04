@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
   }
   const token = authHeader.slice(7);
 
-  // 요청자 신원 확인
   const supabaseUser = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,11 +20,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // 관리자 확인
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
+
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("is_admin")
@@ -35,21 +34,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { userId } = await req.json();
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
-  }
-  if (userId === user.id) {
-    return NextResponse.json(
-      { error: "자신의 계정은 삭제할 수 없습니다" },
-      { status: 400 },
-    );
-  }
+  // 명부 전체 claimed 초기화
+  await supabaseAdmin
+    .from("student_roster")
+    .update({ claimed: false })
+    .neq("id", "00000000-0000-0000-0000-000000000000");
 
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  // 비관리자 계정 전체 미승인으로 전환
+  await supabaseAdmin
+    .from("profiles")
+    .update({ approved: false })
+    .eq("is_admin", false);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,7 @@
 
 :root,
 [data-theme="dark"] {
+  color-scheme: dark;
   --background: #131319;
   --foreground: #ececec;
   --surface: #1e1e27;
@@ -13,9 +14,11 @@
   --primary-hover: #818cf8;
   --muted: #6b7280;
   --muted-fg: #8b90a0;
+  --header-bg: rgba(19, 19, 25, 0.85);
 }
 
 [data-theme="dim"] {
+  color-scheme: dark;
   --background: #1c1e26;
   --foreground: #dde1ec;
   --surface: #252830;
@@ -26,9 +29,11 @@
   --primary-hover: #818cf8;
   --muted: #6b7280;
   --muted-fg: #8b92a8;
+  --header-bg: rgba(28, 30, 38, 0.85);
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --background: #f8f9fa;
   --foreground: #1a1c2e;
   --surface: #ffffff;
@@ -39,6 +44,7 @@
   --primary-hover: #4f46e5;
   --muted: #9ca3af;
   --muted-fg: #6b7280;
+  --header-bg: rgba(248, 249, 250, 0.85);
 }
 
 @theme inline {
@@ -64,6 +70,8 @@ body {
   color: var(--foreground);
   font-family: "Noto Sans KR", system-ui, sans-serif;
   min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* 스크롤바 */
@@ -385,14 +393,11 @@ body {
 .card {
   background: var(--surface);
   border-radius: 6px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
-  transition:
-    box-shadow 0.25s ease,
-    transform 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.15s ease;
 }
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 /* ===== 구분선 ===== */
@@ -502,6 +507,12 @@ body {
 }
 
 .back-link:hover {
+  color: var(--foreground);
+}
+
+/* ===== 슬라이드 패널 ===== */
+.slide-panel {
+  background: var(--surface-2) !important;
   color: var(--foreground);
 }
 

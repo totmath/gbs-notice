@@ -5,20 +5,57 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, PostFile } from "@/lib/supabase";
 
-async function uploadFiles(fileList: File[]): Promise<PostFile[]> {
+const MAX_FILES = 5;
+
+async function uploadFiles(
+  fileList: File[],
+  token: string,
+): Promise<{ files: PostFile[]; error?: string }> {
+  const limited = fileList.slice(0, MAX_FILES);
   const uploaded: PostFile[] = [];
-  for (const file of fileList) {
-    const ext = file.name.split(".").pop();
-    const path = `board-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("post-image")
-      .upload(path, file);
-    if (!error) {
-      const { data } = supabase.storage.from("post-image").getPublicUrl(path);
-      uploaded.push({ name: file.name, url: data.publicUrl, type: file.type });
+  for (const file of limited) {
+    const signRes = await fetch("/api/upload-sign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ size: file.size, type: file.type }),
+    });
+    if (!signRes.ok) {
+      const err = await signRes.json().catch(() => ({}));
+      return { files: uploaded, error: err.error ?? "서명 발급 실패" };
+    }
+    const { signature, timestamp, folder, apiKey, cloudName } =
+      await signRes.json();
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("api_key", apiKey);
+    formData.append("timestamp", String(timestamp));
+    formData.append("signature", signature);
+    formData.append("folder", folder);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      { method: "POST", body: formData },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      uploaded.push({ name: file.name, url: data.secure_url, type: file.type });
+    } else {
+      const err = await res.json().catch(() => ({}));
+      return { files: uploaded, error: err.error?.message ?? "업로드 실패" };
     }
   }
-  return uploaded;
+  const skipped = fileList.length - limited.length;
+  return {
+    files: uploaded,
+    error:
+      skipped > 0
+        ? `파일은 최대 ${MAX_FILES}개까지 첨부 가능합니다.`
+        : undefined,
+  };
 }
 
 export default function BoardNewPage() {
@@ -65,7 +102,19 @@ export default function BoardNewPage() {
     e.preventDefault();
     setSubmitting(true);
     setError("");
-    const uploadedFiles = await uploadFiles(files);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const { files: uploadedFiles, error: uploadError } = await uploadFiles(
+      files,
+      token,
+    );
+    if (uploadError) {
+      setError(uploadError);
+      setSubmitting(false);
+      return;
+    }
     const { error: insertError } = await supabase.from("board_posts").insert({
       user_id: userId,
       author: authorLabel,
@@ -108,6 +157,7 @@ export default function BoardNewPage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
+          maxLength={200}
           className="input-base"
         />
         <textarea
@@ -116,6 +166,7 @@ export default function BoardNewPage() {
           onChange={(e) => setContent(e.target.value)}
           rows={12}
           required
+          maxLength={10000}
           className="input-base resize-none"
         />
 

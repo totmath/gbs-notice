@@ -40,6 +40,18 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+  if (name && typeof name === "string" && name.trim().length > 16) {
+    return NextResponse.json(
+      { error: "이름은 16자 이하여야 합니다." },
+      { status: 400 },
+    );
+  }
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+    return NextResponse.json(
+      { error: "username must be 3-30 alphanumeric characters" },
+      { status: 400 },
+    );
+  }
 
   const email = `${username}@gbs.school`;
 
@@ -62,6 +74,8 @@ export async function POST(req: NextRequest) {
     student_id: studentId || null,
     email: username,
     approved: true,
+    can_post: true,
+    can_view: true,
   });
 
   return NextResponse.json({ success: true });

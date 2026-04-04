@@ -21,8 +21,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { subscription } = await req.json();
-  if (!subscription)
-    return NextResponse.json({ error: "missing params" }, { status: 400 });
+  if (
+    !subscription ||
+    typeof subscription !== "object" ||
+    typeof subscription.endpoint !== "string" ||
+    !subscription.endpoint.startsWith("https://") ||
+    typeof subscription.keys?.p256dh !== "string" ||
+    typeof subscription.keys?.auth !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "invalid subscription" },
+      { status: 400 },
+    );
+  }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

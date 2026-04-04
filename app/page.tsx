@@ -11,23 +11,313 @@ type FeedItem =
   | (Post & { _source: "notice" })
   | (BoardPost & { _source: "board"; category: "자유게시판"; pinned: false });
 
-const CATEGORIES: Post["category"][] = ["공지", "일정", "동아리"];
+const CATEGORIES: Post["category"][] = ["공지", "일정", "행사", "동아리"];
 const PAGE_SIZE = 10;
 
-async function uploadFiles(fileList: File[]): Promise<PostFile[]> {
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      style={{
+        color: "var(--muted-fg)",
+        transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "transform 0.2s",
+      }}
+    >
+      <path
+        d="M2 4.5l5 5 5-5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+type GroupBoxProps = {
+  label: string;
+  badgeClass: string;
+  posts: FeedItem[];
+  expanded: boolean;
+  unreadCount: number;
+  onToggle: () => void;
+  readNoticeIds: Set<string>;
+  isAdmin: boolean;
+  commentCounts: Map<string, number>;
+  editingId: string | null;
+  onStartEdit: (post: FeedItem) => void;
+  onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
+  editTitle: string;
+  setEditTitle: (v: string) => void;
+  editContent: string;
+  setEditContent: (v: string) => void;
+  editCategory: Post["category"];
+  setEditCategory: (v: Post["category"]) => void;
+  editPinned: boolean;
+  setEditPinned: (v: boolean) => void;
+  editFiles: File[];
+  setEditFiles: (v: File[]) => void;
+  editExistingFiles: PostFile[];
+  setEditExistingFiles: (v: PostFile[]) => void;
+  onCancelEdit: () => void;
+  borderColor: string;
+  notifEnabled: boolean;
+};
+
+function GroupBox({
+  label,
+  badgeClass,
+  posts,
+  expanded,
+  unreadCount,
+  onToggle,
+  readNoticeIds,
+  isAdmin,
+  commentCounts,
+  editingId,
+  onStartEdit,
+  onDelete,
+  onEdit,
+  editTitle,
+  setEditTitle,
+  editContent,
+  setEditContent,
+  editCategory,
+  setEditCategory,
+  editPinned,
+  setEditPinned,
+  editFiles,
+  setEditFiles,
+  editExistingFiles,
+  setEditExistingFiles,
+  onCancelEdit,
+  borderColor,
+  notifEnabled,
+}: GroupBoxProps) {
+  return (
+    <div className="card overflow-hidden" style={{ borderColor }}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3"
+      >
+        <div className="flex items-center gap-2">
+          <span className={`badge ${badgeClass}`}>{label}</span>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--foreground)" }}
+          >
+            {label} {posts.length}개
+          </span>
+          {notifEnabled && unreadCount > 0 && (
+            <span
+              className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+              style={{ background: "#ef4444", color: "#fff", lineHeight: 1 }}
+            >
+              새 {label} {unreadCount}
+            </span>
+          )}
+        </div>
+        <ChevronIcon expanded={expanded} />
+      </button>
+      {expanded && (
+        <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
+          {posts.map((post) =>
+            editingId === post.id ? (
+              <div
+                key={post.id}
+                className="card p-4 space-y-3"
+                style={{ borderColor: "rgba(99,102,241,0.4)" }}
+              >
+                <select
+                  value={editCategory}
+                  onChange={(e) =>
+                    setEditCategory(e.target.value as Post["category"])
+                  }
+                  className="input-base"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="input-base"
+                />
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={4}
+                  className="input-base resize-none"
+                />
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={editPinned}
+                    onChange={(e) => setEditPinned(e.target.checked)}
+                    className="w-4 h-4 accent-indigo-500"
+                  />
+                  <span
+                    className="text-sm"
+                    style={{ color: "var(--muted-fg)" }}
+                  >
+                    중요 공지 상단 고정
+                  </span>
+                </label>
+                {editExistingFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {editExistingFiles.map((f, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span style={{ color: "var(--foreground)" }}>
+                          📎 {f.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditExistingFiles(
+                              editExistingFiles.filter((_, j) => j !== i),
+                            )
+                          }
+                          className="text-xs"
+                          style={{ color: "#f87171" }}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) =>
+                    setEditFiles(Array.from(e.target.files ?? []))
+                  }
+                  className="input-base text-xs"
+                  style={{ color: "var(--muted-fg)" }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onEdit(post.id)}
+                    className="btn-primary flex-1 py-1.5"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={onCancelEdit}
+                    className="btn-secondary flex-1 py-1.5"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={post.id}
+                className="relative"
+                style={{ borderBottom: "1px solid var(--border-subtle)" }}
+              >
+                <PostCard
+                  post={post}
+                  isRead={
+                    post._source === "board" || readNoticeIds.has(post.id)
+                  }
+                  isAdmin={isAdmin}
+                  commentCount={commentCounts.get(post.id) ?? 0}
+                />
+                {isAdmin && post._source === "notice" && (
+                  <div className="absolute top-3 right-3 flex gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onStartEdit(post);
+                      }}
+                      className="text-xs px-2 py-0.5 rounded-sm font-medium"
+                      style={{
+                        color: "#818cf8",
+                        background: "rgba(99,102,241,0.1)",
+                        border: "1px solid rgba(99,102,241,0.2)",
+                      }}
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onDelete(post.id);
+                      }}
+                      className="text-xs px-2 py-0.5 rounded-sm font-medium"
+                      style={{
+                        color: "#f87171",
+                        background: "rgba(248,113,113,0.08)",
+                        border: "1px solid rgba(248,113,113,0.2)",
+                      }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
+              </div>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function uploadFiles(
+  fileList: File[],
+): Promise<{ files: PostFile[]; error?: string }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token ?? "";
   const uploaded: PostFile[] = [];
   for (const file of fileList) {
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("post-image")
-      .upload(path, file);
-    if (!error) {
-      const { data } = supabase.storage.from("post-image").getPublicUrl(path);
-      uploaded.push({ name: file.name, url: data.publicUrl, type: file.type });
+    const signRes = await fetch("/api/upload-sign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ size: file.size, type: file.type }),
+    });
+    if (!signRes.ok) {
+      const err = await signRes.json().catch(() => ({}));
+      return { files: uploaded, error: err.error ?? "서명 발급 실패" };
+    }
+    const { signature, timestamp, folder, apiKey, cloudName } =
+      await signRes.json();
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("api_key", apiKey);
+    formData.append("timestamp", String(timestamp));
+    formData.append("signature", signature);
+    formData.append("folder", folder);
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      { method: "POST", body: formData },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      uploaded.push({ name: file.name, url: data.secure_url, type: file.type });
+    } else {
+      const err = await res.json().catch(() => ({}));
+      return { files: uploaded, error: err.error?.message ?? "업로드 실패" };
     }
   }
-  return uploaded;
+  return { files: uploaded };
 }
 
 function Feed() {
@@ -40,9 +330,13 @@ function Feed() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canPost, setCanPost] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [adminBadge, setAdminBadge] = useState(0);
   const [noticeExpanded, setNoticeExpanded] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({});
+  const isNotifEnabled = (cat: string) =>
+    cat === "자유게시판" ? notifPrefs[cat] === true : notifPrefs[cat] !== false;
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
@@ -50,6 +344,10 @@ function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
+
+  const [commentCounts, setCommentCounts] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   // 공지 등록 폼
   const [readNoticeIds, setReadNoticeIds] = useState<Set<string>>(new Set());
@@ -77,11 +375,28 @@ function Feed() {
   useEffect(() => {
     const saved = localStorage.getItem("gbs-author");
     if (saved) setAuthor(saved);
+    try {
+      const prefs = JSON.parse(localStorage.getItem("gbs-notif-prefs") ?? "{}");
+      setNotifPrefs(prefs);
+    } catch {}
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "gbs-notif-prefs") {
+        try {
+          setNotifPrefs(JSON.parse(e.newValue ?? "{}"));
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   useEffect(() => {
     loadingMoreRef.current = loadingMore;
   }, [loadingMore]);
+
+  useEffect(() => {
+    if (posts.length > 0) fetchCommentCounts(posts);
+  }, [posts]);
 
   useEffect(() => {
     if (!bottomRef.current || !hasMore) return;
@@ -109,15 +424,20 @@ function Feed() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("approved, is_admin")
+        .select("approved, is_admin, can_post, can_view")
         .eq("id", user.id)
         .single();
       if (!profile?.approved) {
         router.push("/pending");
         return;
       }
+      if (profile.can_view === false) {
+        router.push("/pending");
+        return;
+      }
       const adminStatus = profile.is_admin ?? false;
       setIsAdmin(adminStatus);
+      setCanPost(profile.can_post ?? false);
       setLoggedIn(true);
       if (adminStatus) {
         const [{ count: pending }, { count: feedback }] = await Promise.all([
@@ -165,6 +485,7 @@ function Feed() {
       let query = supabase
         .from("posts")
         .select("*")
+        .is("deleted_at", null)
         .order("pinned", { ascending: false })
         .order("created_at", { ascending: false })
         .range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE);
@@ -190,12 +511,15 @@ function Feed() {
       setHasMore(fetched.length > PAGE_SIZE);
     } else {
       // 전체: 공지 + 자유게시판 합산
-      let noticeQ = supabase.from("posts").select("*");
+      let noticeQ = supabase.from("posts").select("*").is("deleted_at", null);
       if (!admin) {
         const now = new Date().toISOString();
         noticeQ = noticeQ.or(`scheduled_at.is.null,scheduled_at.lte.${now}`);
       }
-      let boardQ = supabase.from("board_posts").select("*");
+      let boardQ = supabase
+        .from("board_posts")
+        .select("*")
+        .is("deleted_at", null);
       if (q) {
         noticeQ = noticeQ.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
         boardQ = boardQ.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
@@ -220,12 +544,13 @@ function Feed() {
         pinned: false as const,
       }));
 
+      const catPriority = (cat: string) => (cat === "공지" ? 0 : 1);
       const merged = [...notices, ...boards].sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
-        const aNotice = a.category === "공지" ? 1 : 0;
-        const bNotice = b.category === "공지" ? 1 : 0;
-        if (aNotice !== bNotice) return bNotice - aNotice;
+        const pa = catPriority(a.category);
+        const pb = catPriority(b.category);
+        if (pa !== pb) return pa - pb;
         return (
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
@@ -241,6 +566,31 @@ function Feed() {
 
     setLoading(false);
     setLoadingMore(false);
+  }
+
+  async function fetchCommentCounts(items: FeedItem[]) {
+    const noticeIds = items
+      .filter((p) => p._source === "notice")
+      .map((p) => p.id);
+    const boardIds = items
+      .filter((p) => p._source === "board")
+      .map((p) => p.id);
+    const [{ data: nc }, { data: bc }] = await Promise.all([
+      noticeIds.length > 0
+        ? supabase.from("comments").select("post_id").in("post_id", noticeIds)
+        : Promise.resolve({ data: [] }),
+      boardIds.length > 0
+        ? supabase
+            .from("board_comments")
+            .select("post_id")
+            .in("post_id", boardIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const map = new Map<string, number>();
+    for (const r of [...(nc ?? []), ...(bc ?? [])]) {
+      map.set(r.post_id, (map.get(r.post_id) ?? 0) + 1);
+    }
+    setCommentCounts((prev) => new Map([...prev, ...map]));
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -260,7 +610,13 @@ function Feed() {
     e.preventDefault();
     setSubmitting(true);
     setStatus("");
-    const uploadedFiles = await uploadFiles(files);
+    const { files: uploadedFiles, error: uploadError } =
+      await uploadFiles(files);
+    if (uploadError) {
+      setStatus("업로드 오류: " + uploadError);
+      setSubmitting(false);
+      return;
+    }
     const image_url =
       uploadedFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
     localStorage.setItem("gbs-author", author);
@@ -306,7 +662,7 @@ function Feed() {
   }
 
   async function handleEdit(id: string) {
-    const newFiles = await uploadFiles(editFiles);
+    const { files: newFiles } = await uploadFiles(editFiles);
     const allFiles = [...editExistingFiles, ...newFiles];
     const image_url =
       allFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
@@ -319,6 +675,7 @@ function Feed() {
         image_url,
         files: allFiles,
         pinned: editPinned,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", id);
     setEditingId(null);
@@ -373,7 +730,7 @@ function Feed() {
                 color: "var(--foreground)",
               }}
             >
-              계정관리
+              관리
               {adminBadge > 0 && (
                 <span
                   className="absolute flex items-center justify-center text-white font-bold"
@@ -393,30 +750,32 @@ function Feed() {
               )}
             </button>
           )}
-          <button
-            onClick={() => router.push("/post/new")}
-            className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
-            style={{
-              background: "#6366f1",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-            }}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 15 15"
-              fill="none"
-              aria-hidden
+          {(isAdmin || canPost) && (
+            <button
+              onClick={() => router.push("/post/new")}
+              className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
+              style={{
+                background: "#6366f1",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              }}
             >
-              <path
-                d="M7.5 1v13M1 7.5h13"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            글 올리기
-          </button>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 15 15"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M7.5 1v13M1 7.5h13"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              글 올리기
+            </button>
+          )}
         </>
       )}
 
@@ -449,12 +808,12 @@ function Feed() {
           {search ? "검색 결과가 없습니다." : "공지가 없습니다."}
         </p>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {/* 전체 탭에서 공지 묶음 박스 */}
           {category === "전체" &&
             (() => {
-              const noticePosts = posts.filter((p) => p.category === "공지");
-              const otherPosts = posts.filter((p) => p.category !== "공지");
+              const noticePosts = posts.filter((p) => p._source === "notice");
+              const boardPosts = posts.filter((p) => p._source === "board");
               const unreadCount = noticePosts.filter(
                 (p) => !readNoticeIds.has(p.id),
               ).length;
@@ -491,9 +850,9 @@ function Feed() {
                             className="text-sm font-medium"
                             style={{ color: "var(--foreground)" }}
                           >
-                            공지사항 {noticePosts.length}개
+                            공지 {noticePosts.length}개
                           </span>
-                          {unreadCount > 0 && (
+                          {isNotifEnabled("공지") && unreadCount > 0 && (
                             <span
                               className="text-xs px-1.5 py-0.5 rounded-full font-bold"
                               style={{
@@ -506,27 +865,7 @@ function Feed() {
                             </span>
                           )}
                         </div>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 14 14"
-                          fill="none"
-                          style={{
-                            color: "var(--muted-fg)",
-                            transform: noticeExpanded
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-                            transition: "transform 0.2s",
-                          }}
-                        >
-                          <path
-                            d="M2 4.5l5 5 5-5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                        <ChevronIcon expanded={noticeExpanded} />
                       </button>
                       {noticeExpanded && (
                         <div
@@ -542,7 +881,12 @@ function Feed() {
                                 borderBottom: "1px solid var(--border-subtle)",
                               }}
                             >
-                              <PostCard post={post} />
+                              <PostCard
+                                post={post}
+                                isRead={readNoticeIds.has(post.id)}
+                                isAdmin={isAdmin}
+                                commentCount={commentCounts.get(post.id) ?? 0}
+                              />
                               {isAdmin && (
                                 <div className="absolute top-3 right-3 flex gap-1.5">
                                   <button
@@ -581,104 +925,17 @@ function Feed() {
                       )}
                     </div>
                   )}
-                  {otherPosts.map((post) =>
-                    editingId === post.id ? (
-                      <div
-                        key={post.id}
-                        className="card p-4 space-y-3"
-                        style={{ borderColor: "rgba(99,102,241,0.4)" }}
-                      >
-                        <select
-                          value={editCategory}
-                          onChange={(e) =>
-                            setEditCategory(e.target.value as Post["category"])
-                          }
-                          className="input-base"
-                        >
-                          {CATEGORIES.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className="input-base"
-                        />
-                        <textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          rows={4}
-                          className="input-base resize-none"
-                        />
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={editPinned}
-                            onChange={(e) => setEditPinned(e.target.checked)}
-                            className="w-4 h-4 accent-indigo-500"
-                          />
-                          <span
-                            className="text-sm"
-                            style={{ color: "var(--muted-fg)" }}
-                          >
-                            중요 공지 상단 고정
-                          </span>
-                        </label>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(post.id)}
-                            className="btn-primary flex-1 py-1.5"
-                          >
-                            저장
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="btn-secondary flex-1 py-1.5"
-                          >
-                            취소
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={post.id} className="relative">
-                        <PostCard post={post} />
-                        {isAdmin && post._source === "notice" && (
-                          <div className="absolute top-3 right-3 flex gap-1.5">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                startEdit(post);
-                              }}
-                              className="text-xs px-2 py-0.5 rounded-sm font-medium"
-                              style={{
-                                color: "#818cf8",
-                                background: "rgba(99,102,241,0.1)",
-                                border: "1px solid rgba(99,102,241,0.2)",
-                              }}
-                            >
-                              수정
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDelete(post.id);
-                              }}
-                              className="text-xs px-2 py-0.5 rounded-sm font-medium"
-                              style={{
-                                color: "#f87171",
-                                background: "rgba(248,113,113,0.08)",
-                                border: "1px solid rgba(248,113,113,0.2)",
-                              }}
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ),
-                  )}
+                  {/* 자유글 개별 카드 */}
+                  {boardPosts.map((post) => (
+                    <div key={post.id} className="relative">
+                      <PostCard
+                        post={post}
+                        isRead={true}
+                        isAdmin={isAdmin}
+                        commentCount={commentCounts.get(post.id) ?? 0}
+                      />
+                    </div>
+                  ))}
                 </>
               );
             })()}
@@ -798,7 +1055,12 @@ function Feed() {
                 </div>
               ) : (
                 <div key={post.id} className="relative">
-                  <PostCard post={post} />
+                  <PostCard
+                    post={post}
+                    isRead={
+                      post._source === "board" || readNoticeIds.has(post.id)
+                    }
+                  />
                   {isAdmin && (
                     <div className="absolute top-3 right-3 flex gap-1.5">
                       <button

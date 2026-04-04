@@ -213,10 +213,8 @@ export default function ThemeToggle() {
           height: "calc(100% - 4px)",
           borderRadius: 7,
           background: "var(--primary)",
-          boxShadow: "0 0 10px rgba(99,102,241,0.45)",
           transform: `translateX(${INDICATOR_OFFSET[theme]}px)`,
-          transition:
-            "transform 0.22s cubic-bezier(0.4,0,0.2,1), box-shadow 0.22s",
+          transition: "transform 0.22s cubic-bezier(0.4,0,0.2,1)",
           pointerEvents: "none",
         }}
       />

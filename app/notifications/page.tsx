@@ -49,9 +49,17 @@ export default function NotificationsPage() {
     init();
   }, [router]);
 
-  async function handleDelete(id: string) {
-    await supabase.from("notifications").delete().eq("id", id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  async function handleDelete(notifId: string) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notifId)
+      .eq("user_id", user.id);
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
   }
 
   async function handleClearAll() {
@@ -124,8 +132,14 @@ export default function NotificationsPage() {
               }}
             >
               <div className="flex-1 min-w-0">
-                {n.post_id ? (
-                  <Link href={`/post/${n.post_id}`}>
+                {n.post_id || n.board_post_id ? (
+                  <Link
+                    href={
+                      n.board_post_id
+                        ? `/board/${n.board_post_id}`
+                        : `/post/${n.post_id}`
+                    }
+                  >
                     <p
                       className="text-sm font-semibold leading-snug"
                       style={{ color: "var(--foreground)" }}

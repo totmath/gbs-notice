@@ -80,7 +80,7 @@ export default function LoginPage() {
             로그인
           </h1>
           <p className="text-sm" style={{ color: "var(--muted-fg)" }}>
-            경기북과학고 공지 시스템
+            GBSHS
           </p>
         </div>
 

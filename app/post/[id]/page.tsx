@@ -20,9 +20,12 @@ export default function PostDetailPage() {
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [commentAnon, setCommentAnon] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentAuthor, setCurrentAuthor] = useState("");
@@ -48,8 +51,19 @@ export default function PostDetailPage() {
         return;
       }
 
+      const isAdminUser = profile.is_admin ?? false;
+      const grade = profile.student_id?.split("-")[0] ?? null;
       setCurrentUserId(user.id);
-      setIsAdmin(profile.is_admin ?? false);
+      setIsAdmin(isAdminUser);
+      // 읽음 처리
+      const key = `gbs-read-notices-${user.id}`;
+      try {
+        const prev = new Set<string>(
+          JSON.parse(localStorage.getItem(key) ?? "[]"),
+        );
+        prev.add(id);
+        localStorage.setItem(key, JSON.stringify([...prev]));
+      } catch {}
       setCurrentAuthor(
         profile.student_id
           ? `${profile.student_id} ${profile.name}`
@@ -63,13 +77,16 @@ export default function PostDetailPage() {
         .single();
       if (error || !data) {
         setError(true);
+      } else if (data.deleted_at && !isAdminUser) {
+        router.replace("/");
+        return;
+      } else if (!isAdminUser && data.visible_to && data.visible_to !== grade) {
+        router.replace("/");
+        return;
       } else {
         setPost(data);
         // 조회수 증가
-        await supabase
-          .from("posts")
-          .update({ view_count: (data.view_count ?? 0) + 1 })
-          .eq("id", id);
+        await supabase.rpc("increment_post_view", { post_id: id });
       }
       setLoading(false);
       loadComments();
@@ -82,6 +99,7 @@ export default function PostDetailPage() {
       .from("comments")
       .select("*")
       .eq("post_id", id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: true });
     setComments(data ?? []);
   }
@@ -95,14 +113,30 @@ export default function PostDetailPage() {
       user_id: currentUserId,
       author: currentAuthor,
       content: commentText.trim(),
+      is_anonymous: commentAnon,
     });
+    if (post && post.user_id !== currentUserId) {
+      await supabase.from("notifications").insert({
+        user_id: post.user_id,
+        title: "새 댓글",
+        body: `${commentAnon ? "익명" : currentAuthor}님이 댓글을 달았습니다: ${commentText.trim().slice(0, 50)}`,
+        post_id: id,
+        board_post_id: null,
+      });
+    }
     setCommentText("");
+    setCommentAnon(false);
     setSubmittingComment(false);
     loadComments();
   }
 
   async function handleDeleteComment(commentId: string) {
-    await supabase.from("comments").delete().eq("id", commentId);
+    let query = supabase
+      .from("comments")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", commentId);
+    if (!isAdmin) query = query.eq("user_id", currentUserId);
+    await query;
     loadComments();
   }
 
@@ -187,22 +221,93 @@ export default function PostDetailPage() {
         >
           {post.title}
         </h1>
+        {post.updated_at && (
+          <span className="text-xs" style={{ color: "var(--muted-fg)" }}>
+            수정됨
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
         <BookmarkButton postId={id} />
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          className="text-xs flex items-center gap-1"
+          style={{ color: copied ? "#6366f1" : "var(--muted-fg)" }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          {copied ? "복사됨!" : "공유"}
+        </button>
       </div>
 
       {post.image_url && (
-        <div
-          className="overflow-hidden rounded-xl"
+        <button
+          className="overflow-hidden rounded-xl w-full"
           style={{ border: "1px solid var(--border-subtle)" }}
+          onClick={() => setLightboxUrl(post.image_url)}
         >
           <img
             src={post.image_url}
             alt=""
             className="w-full max-h-80 object-contain"
             style={{ background: "var(--surface)" }}
+          />
+        </button>
+      )}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.92)" }}
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 flex items-center justify-center rounded-full"
+            style={{
+              width: 36,
+              height: 36,
+              background: "rgba(255,255,255,0.15)",
+              color: "#fff",
+            }}
+            onClick={() => setLightboxUrl(null)}
+            aria-label="닫기"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M3 3l10 10M13 3L3 13"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="rounded-lg"
+            style={{
+              maxWidth: "calc(100vw - 96px)",
+              maxHeight: "calc(100vh - 80px)",
+              objectFit: "contain",
+            }}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}
@@ -261,7 +366,18 @@ export default function PostDetailPage() {
                     className="text-xs font-medium"
                     style={{ color: "var(--foreground)" }}
                   >
-                    {c.author}
+                    {c.is_anonymous && !isAdmin && c.user_id !== currentUserId
+                      ? "익명"
+                      : c.author}
+                    {c.is_anonymous &&
+                      (isAdmin || c.user_id === currentUserId) && (
+                        <span
+                          className="text-xs ml-1"
+                          style={{ color: "var(--muted-fg)" }}
+                        >
+                          (익명)
+                        </span>
+                      )}
                   </span>
                   <div className="flex items-center gap-2">
                     <span
@@ -295,22 +411,34 @@ export default function PostDetailPage() {
           </div>
         )}
 
-        <form onSubmit={handleCommentSubmit} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="댓글 입력..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            className="input-base flex-1"
-            maxLength={500}
-          />
-          <button
-            type="submit"
-            disabled={submittingComment || !commentText.trim()}
-            className="btn-primary px-4"
-          >
-            등록
-          </button>
+        <form onSubmit={handleCommentSubmit} className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="댓글 입력..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="input-base flex-1"
+              maxLength={1000}
+            />
+            <button
+              type="submit"
+              disabled={submittingComment || !commentText.trim()}
+              className="btn-primary px-4"
+            >
+              등록
+            </button>
+          </div>
+          <label className="flex items-center gap-1.5 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={commentAnon}
+              onChange={(e) => setCommentAnon(e.target.checked)}
+            />
+            <span className="text-xs" style={{ color: "var(--muted-fg)" }}>
+              익명으로 달기
+            </span>
+          </label>
         </form>
       </div>
     </article>

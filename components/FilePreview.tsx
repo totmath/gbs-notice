@@ -11,7 +11,7 @@ function fileIcon(type: string) {
 }
 
 export default function FilePreview({ files }: { files: PostFile[] }) {
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   const images = files.filter((f) => f.type.startsWith("image/"));
   const videos = files.filter((f) => f.type.startsWith("video/"));
@@ -33,7 +33,7 @@ export default function FilePreview({ files }: { files: PostFile[] }) {
           {images.map((f, i) => (
             <button
               key={i}
-              onClick={() => setLightbox(f.url)}
+              onClick={() => setLightboxIdx(i)}
               className="overflow-hidden rounded-xl w-full"
               style={{ border: "1px solid var(--border-subtle)" }}
             >
@@ -128,26 +128,114 @@ export default function FilePreview({ files }: { files: PostFile[] }) {
       )}
 
       {/* 라이트박스 */}
-      {lightbox && (
+      {lightboxIdx !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.85)" }}
-          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.92)" }}
+          onClick={() => setLightboxIdx(null)}
         >
+          {/* 닫기 */}
           <button
-            className="absolute top-4 right-4 text-white text-2xl font-bold"
-            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 flex items-center justify-center rounded-full"
+            style={{
+              width: 36,
+              height: 36,
+              background: "rgba(255,255,255,0.15)",
+              color: "#fff",
+            }}
+            onClick={() => setLightboxIdx(null)}
             aria-label="닫기"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M3 3l10 10M13 3L3 13"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
+
+          {/* 이전 */}
+          {images.length > 1 && (
+            <button
+              className="absolute left-3 flex items-center justify-center rounded-full"
+              style={{
+                width: 36,
+                height: 36,
+                background: "rgba(255,255,255,0.15)",
+                color: "#fff",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx(
+                  (lightboxIdx - 1 + images.length) % images.length,
+                );
+              }}
+              aria-label="이전"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M10 3L5 8l5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+
+          {/* 이미지 */}
           <img
-            src={lightbox}
-            alt=""
+            src={images[lightboxIdx].url}
+            alt={images[lightboxIdx].name}
             className="max-w-full max-h-full rounded-lg"
-            style={{ objectFit: "contain" }}
+            style={{
+              maxWidth: "calc(100vw - 96px)",
+              maxHeight: "calc(100vh - 80px)",
+              objectFit: "contain",
+            }}
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* 다음 */}
+          {images.length > 1 && (
+            <button
+              className="absolute right-3 flex items-center justify-center rounded-full"
+              style={{
+                width: 36,
+                height: 36,
+                background: "rgba(255,255,255,0.15)",
+                color: "#fff",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx((lightboxIdx + 1) % images.length);
+              }}
+              aria-label="다음"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M6 3l5 5-5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+
+          {/* 카운터 */}
+          {images.length > 1 && (
+            <div
+              className="absolute bottom-4 text-sm font-medium"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              {lightboxIdx + 1} / {images.length}
+            </div>
+          )}
         </div>
       )}
     </div>

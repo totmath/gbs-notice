@@ -12,15 +12,19 @@ export default function AccountPage() {
   const [studentId, setStudentId] = useState("");
   const [username, setUsername] = useState("");
   const [userId, setUserId] = useState("");
-  const [pushGranted, setPushGranted] = useState(false);
+  // 알림 구독
+  const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
-
   // 비밀번호 변경
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwStatus, setPwStatus] = useState("");
   const [pwSubmitting, setPwSubmitting] = useState(false);
+  // 아이디 변경
+  const [newUsername, setNewUsername] = useState("");
+  const [idStatus, setIdStatus] = useState("");
+  const [idSubmitting, setIdSubmitting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -44,10 +48,13 @@ export default function AccountPage() {
       setStudentId(profile.student_id ?? "");
       setUsername(profile.email);
       setUserId(user.id);
-      setLoading(false);
-      if ("Notification" in window) {
-        setPushGranted(Notification.permission === "granted");
+      // 푸시 구독 상태 확인
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setPushSubscribed(!!sub);
       }
+      setLoading(false);
     }
     load();
   }, [router]);
@@ -91,47 +98,54 @@ export default function AccountPage() {
     }
   }
 
-  async function handlePushToggle() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  async function handleUsernameChange(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newUsername.trim();
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
+      setIdStatus("영문, 숫자, 밑줄(_)만 사용 가능하며 3~30자여야 합니다.");
+      return;
+    }
+    setIdSubmitting(true);
+    setIdStatus("");
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const res = await fetch("/api/update-username", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ newUsername: trimmed }),
+    });
+    const json = await res.json();
+    setIdSubmitting(false);
+    if (!res.ok) {
+      setIdStatus(json.error ?? "오류가 발생했습니다.");
+    } else {
+      setUsername(trimmed);
+      setNewUsername("");
+      setIdStatus("아이디가 변경되었습니다.");
+    }
+  }
+
+  async function handlePushUnsubscribe() {
     setPushLoading(true);
-    if (pushGranted) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
       const {
         data: { session },
       } = await supabase.auth.getSession();
       await fetch("/api/push-subscribe", {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({}),
+        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      setPushGranted(false);
-    } else {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        setPushLoading(false);
-        return;
-      }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      });
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      await fetch("/api/push-subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
-      });
-      setPushGranted(true);
+      setPushSubscribed(false);
+    } finally {
+      setPushLoading(false);
     }
-    setPushLoading(false);
   }
 
   async function handleLogout() {
@@ -216,6 +230,51 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* 아이디 변경 카드 */}
+      <div
+        className="rounded-xl p-5 space-y-4"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
+        <h2
+          className="text-xs font-semibold uppercase tracking-wider"
+          style={{ color: "var(--muted-fg)" }}
+        >
+          아이디 변경
+        </h2>
+        <form onSubmit={handleUsernameChange} className="space-y-2.5">
+          <input
+            type="text"
+            placeholder="새 아이디"
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value.replace(/\s/g, ""))}
+            required
+            className="input-base"
+          />
+          {idStatus && (
+            <p
+              className="text-sm px-1"
+              style={{
+                color: idStatus.includes("변경되었습니다")
+                  ? "#34d399"
+                  : "#f87171",
+              }}
+            >
+              {idStatus}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={idSubmitting}
+            className="btn-primary w-full py-2"
+          >
+            {idSubmitting ? "변경 중..." : "변경하기"}
+          </button>
+        </form>
+      </div>
+
       {/* 비밀번호 변경 카드 */}
       <div
         className="rounded-xl p-5 space-y-4"
@@ -277,49 +336,20 @@ export default function AccountPage() {
         </form>
       </div>
 
-      {/* 푸시 알림 */}
-      {"Notification" in (typeof window !== "undefined" ? window : {}) && (
-        <div
-          className="rounded-xl p-5 flex items-center justify-between"
+      {/* 알림 구독 해제 */}
+      {pushSubscribed && (
+        <button
+          onClick={handlePushUnsubscribe}
+          disabled={pushLoading}
+          className="w-full py-2.5 text-sm font-medium rounded-xl"
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border-subtle)",
+            color: "var(--muted-fg)",
           }}
         >
-          <div>
-            <p
-              className="text-sm font-medium"
-              style={{ color: "var(--foreground)" }}
-            >
-              새 공지 알림
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--muted-fg)" }}>
-              {pushGranted
-                ? "알림이 켜져 있습니다"
-                : "새 공지 등록 시 알림을 받습니다"}
-            </p>
-          </div>
-          <button
-            onClick={handlePushToggle}
-            disabled={pushLoading}
-            className="text-sm px-4 py-1.5 rounded-lg font-medium transition-all"
-            style={
-              pushGranted
-                ? {
-                    background: "rgba(248,113,113,0.1)",
-                    color: "#f87171",
-                    border: "1px solid rgba(248,113,113,0.2)",
-                  }
-                : {
-                    background: "rgba(99,102,241,0.1)",
-                    color: "#818cf8",
-                    border: "1px solid rgba(99,102,241,0.2)",
-                  }
-            }
-          >
-            {pushLoading ? "..." : pushGranted ? "끄기" : "켜기"}
-          </button>
-        </div>
+          {pushLoading ? "처리 중..." : "푸시 알림 구독 해제"}
+        </button>
       )}
 
       {/* 로그아웃 */}

@@ -1,12 +1,17 @@
 {
-  "name": "경기북과학고 공지",
-  "short_name": "경북과 공지",
+  "name": "GBSHS",
+  "short_name": "GBSHS",
   "description": "경기북과학고등학교 공지사항 앱",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#6366f1",
   "icons": [
+    {
+      "src": "/icons/icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
@@ -16,6 +21,12 @@
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
     }
   ]
 }

@@ -47,6 +47,10 @@ export default function FeedbackPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!content.trim()) return;
+    if (content.trim().length > 2000) {
+      setStatus("내용은 2000자 이하여야 합니다.");
+      return;
+    }
     setSubmitting(true);
     setStatus("");
     const { error } = await supabase.from("feedback").insert({
@@ -151,6 +155,7 @@ export default function FeedbackPage() {
               onChange={(e) => setContent(e.target.value)}
               rows={6}
               required
+              maxLength={2000}
               className="input-base resize-none"
             />
             {status && (

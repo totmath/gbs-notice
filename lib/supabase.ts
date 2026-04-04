@@ -33,6 +33,8 @@ export type Post = {
   pinned: boolean;
   view_count: number;
   scheduled_at: string | null;
+  user_id: string | null;
+  updated_at: string | null;
 };
 
 export type BoardPost = {
@@ -42,9 +44,10 @@ export type BoardPost = {
   title: string;
   content: string;
   created_at: string;
+  updated_at: string | null;
   view_count: number;
   files: PostFile[];
-  is_anonymous?: boolean;
+  is_anonymous: boolean;
 };
 
 export type Comment = {
@@ -54,6 +57,9 @@ export type Comment = {
   author: string;
   content: string;
   created_at: string;
+  parent_id: string | null;
+  is_anonymous?: boolean;
+  deleted_at?: string | null;
 };
 
 export type Bookmark = {
@@ -79,6 +85,7 @@ export type Notification = {
   title: string;
   body: string;
   post_id: string | null;
+  board_post_id: string | null;
   created_at: string;
   is_read: boolean;
 };
@@ -101,5 +108,7 @@ export type Profile = {
   class_num: number | null;
   approved: boolean;
   is_admin: boolean;
+  can_post: boolean;
+  can_view: boolean;
   created_at: string;
 };

@@ -5,29 +5,72 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, Post, PostFile } from "@/lib/supabase";
 
-const NOTICE_CATEGORIES: Post["category"][] = ["공지", "일정", "동아리"];
+const NOTICE_CATEGORIES: Post["category"][] = [
+  "공지",
+  "일정",
+  "행사",
+  "동아리",
+];
 type FormCategory = Post["category"] | "자유게시판";
 
-async function uploadFiles(fileList: File[]): Promise<PostFile[]> {
+const MAX_FILES = 5;
+
+async function uploadFiles(
+  fileList: File[],
+  token: string,
+): Promise<{ files: PostFile[]; error?: string }> {
+  const limited = fileList.slice(0, MAX_FILES);
   const uploaded: PostFile[] = [];
-  for (const file of fileList) {
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("post-image")
-      .upload(path, file);
-    if (!error) {
-      const { data } = supabase.storage.from("post-image").getPublicUrl(path);
-      uploaded.push({ name: file.name, url: data.publicUrl, type: file.type });
+  for (const file of limited) {
+    const signRes = await fetch("/api/upload-sign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ size: file.size, type: file.type }),
+    });
+    if (!signRes.ok) {
+      const err = await signRes.json().catch(() => ({}));
+      return { files: uploaded, error: err.error ?? "서명 발급 실패" };
+    }
+    const { signature, timestamp, folder, apiKey, cloudName } =
+      await signRes.json();
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("api_key", apiKey);
+    formData.append("timestamp", String(timestamp));
+    formData.append("signature", signature);
+    formData.append("folder", folder);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      { method: "POST", body: formData },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      uploaded.push({ name: file.name, url: data.secure_url, type: file.type });
+    } else {
+      const err = await res.json().catch(() => ({}));
+      return { files: uploaded, error: err.error?.message ?? "업로드 실패" };
     }
   }
-  return uploaded;
+  const skipped = fileList.length - limited.length;
+  return {
+    files: uploaded,
+    error:
+      skipped > 0
+        ? `파일은 최대 ${MAX_FILES}개까지 첨부 가능합니다.`
+        : undefined,
+  };
 }
 
 export default function NewPostPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canPost, setCanPost] = useState(false);
   const [userId, setUserId] = useState("");
   const [authorLabel, setAuthorLabel] = useState("");
   const [title, setTitle] = useState("");
@@ -36,6 +79,7 @@ export default function NewPostPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [pinned, setPinned] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -50,7 +94,7 @@ export default function NewPostPage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("approved, is_admin, name, student_id")
+        .select("approved, is_admin, can_post, name, student_id")
         .eq("id", user.id)
         .single();
       if (!profile?.approved) {
@@ -58,9 +102,11 @@ export default function NewPostPage() {
         return;
       }
       const adminStatus = profile.is_admin ?? false;
+      const canPostStatus = profile.can_post ?? false;
       setIsAdmin(adminStatus);
+      setCanPost(canPostStatus);
       setUserId(user.id);
-      if (adminStatus) setCategory("공지");
+      if (adminStatus || canPostStatus) setCategory("공지");
       setAuthorLabel(
         profile.student_id
           ? `${profile.student_id} ${profile.name}`
@@ -75,7 +121,19 @@ export default function NewPostPage() {
     e.preventDefault();
     setSubmitting(true);
     setError("");
-    const uploadedFiles = await uploadFiles(files);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const { files: uploadedFiles, error: uploadError } = await uploadFiles(
+      files,
+      token,
+    );
+    if (uploadError) {
+      setError(uploadError);
+      setSubmitting(false);
+      return;
+    }
 
     if (category === "자유게시판") {
       const { error: insertError } = await supabase.from("board_posts").insert({
@@ -84,6 +142,7 @@ export default function NewPostPage() {
         user_id: userId,
         author: authorLabel,
         files: uploadedFiles,
+        is_anonymous: isAnonymous,
       });
       setSubmitting(false);
       if (insertError) setError(insertError.message);
@@ -103,6 +162,7 @@ export default function NewPostPage() {
         author: authorLabel,
         files: uploadedFiles,
         pinned,
+        user_id: userId,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       })
       .select("id")
@@ -145,8 +205,23 @@ export default function NewPostPage() {
         <h1 className="text-xl font-bold">글 올리기</h1>
       </div>
 
-      <div className="text-sm text-slate-400 bg-slate-800 rounded-lg px-3 py-2">
-        작성자: <span className="text-slate-200">{authorLabel}</span>
+      <div className="text-sm text-slate-400 bg-slate-800 rounded-lg px-3 py-2 flex items-center justify-between">
+        <span>
+          작성자: <span className="text-slate-200">{authorLabel}</span>
+        </span>
+        {category === "자유게시판" && (
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="w-4 h-4 accent-indigo-500"
+            />
+            <span className="text-sm" style={{ color: "var(--muted-fg)" }}>
+              익명
+            </span>
+          </label>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -159,7 +234,7 @@ export default function NewPostPage() {
             onChange={(e) => setCategory(e.target.value as FormCategory)}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
           >
-            {isAdmin &&
+            {(isAdmin || canPost) &&
               NOTICE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -179,6 +254,7 @@ export default function NewPostPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            maxLength={200}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
           />
         </div>
@@ -193,6 +269,7 @@ export default function NewPostPage() {
             onChange={(e) => setContent(e.target.value)}
             rows={10}
             required
+            maxLength={10000}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
           />
         </div>
@@ -227,6 +304,20 @@ export default function NewPostPage() {
             </ul>
           )}
         </div>
+
+        {category === "자유게시판" && (
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="w-4 h-4 accent-indigo-500"
+            />
+            <span className="text-sm" style={{ color: "var(--muted-fg)" }}>
+              익명으로 올리기
+            </span>
+          </label>
+        )}
 
         {category !== "자유게시판" && (
           <>

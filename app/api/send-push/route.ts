@@ -43,6 +43,27 @@ export async function POST(req: NextRequest) {
   );
 
   const { title, body, postId } = await req.json();
+  if (!title || typeof title !== "string" || title.length > 200) {
+    return NextResponse.json({ error: "invalid title" }, { status: 400 });
+  }
+  if (body && (typeof body !== "string" || body.length > 500)) {
+    return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  }
+
+  // postId 유효성 검증
+  let validPostId: string | null = null;
+  if (postId != null) {
+    const { data: postRow } = await supabaseAdmin
+      .from("posts")
+      .select("id")
+      .eq("id", postId)
+      .is("deleted_at", null)
+      .single();
+    if (!postRow) {
+      return NextResponse.json({ error: "invalid postId" }, { status: 400 });
+    }
+    validPostId = postRow.id;
+  }
 
   // 알림 히스토리 저장 (승인된 모든 유저)
   const { data: approvedUsers } = await supabaseAdmin
@@ -56,7 +77,7 @@ export async function POST(req: NextRequest) {
         user_id: u.id,
         title,
         body,
-        post_id: postId ?? null,
+        post_id: validPostId,
       })),
     );
   }

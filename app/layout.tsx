@@ -2,16 +2,17 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import AdminHeaderButton from "@/components/AdminHeaderButton";
 import ThemeToggle from "@/components/ThemeToggle";
+import HeaderTitle from "@/components/HeaderTitle";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "경기북과학고 공지",
-  description: "경기북과학고등학교 공지사항, 학사일정, 행사, 동아리 정보",
+  title: "GBSHS",
+  description: "경기북과학고등학교 공지사항 앱",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "경북과 공지",
+    title: "GBSHS",
   },
 };
 
@@ -31,7 +32,7 @@ export default function RootLayout({
     <html lang="ko">
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){var t=localStorage.getItem('gbs-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()`,
+          __html: `(function(){var t=localStorage.getItem('gbs-theme')||'dark';var bg=t==='light'?'#f8f9fa':t==='dim'?'#1c1e26':'#131319';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=bg;document.documentElement.style.colorScheme=t==='light'?'light':'dark';})()`,
         }}
       />
       <body
@@ -41,20 +42,13 @@ export default function RootLayout({
         <header
           className="sticky top-0 z-40 px-5 py-3 flex justify-between items-center"
           style={{
-            background: "rgba(9, 9, 15, 0.85)",
+            background: "var(--header-bg)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
             borderBottom: "1px solid var(--border-subtle)",
           }}
         >
-          <Link href="/">
-            <h1
-              className="text-base font-semibold tracking-tight"
-              style={{ color: "var(--foreground)" }}
-            >
-              경기북과학고
-            </h1>
-          </Link>
+          <HeaderTitle />
           <div className="flex items-center gap-1">
             <ThemeToggle />
             <AdminHeaderButton />

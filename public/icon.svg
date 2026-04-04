@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+
+    <!-- Background: indigo → deep purple, diagonal -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+
+    <!-- Glassy sheen: top highlight + bottom shadow -->
+    <linearGradient id="sheen" x1="0%" y1="0%" x2="20%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="50%"  stop-color="#ffffff" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.12"/>
+    </linearGradient>
+
+    <!-- G lettermark: white → indigo-50 -->
+    <linearGradient id="gGrad" x1="5%" y1="5%" x2="95%" y2="95%">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#c7d2fe"/>
+    </linearGradient>
+
+    <!-- Notification dot: light rose → deep rose -->
+    <radialGradient id="dotGrad" cx="38%" cy="35%" r="65%">
+      <stop offset="0%"   stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </radialGradient>
+
+    <!-- Icon drop shadow -->
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12"
+                    flood-color="#1e0054" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Subtle letter shadow for depth -->
+    <filter id="letterShadow" x="-6%" y="-6%" width="112%" height="112%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5"
+                    flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+
+    <!-- Dot glow -->
+    <filter id="dotGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+  </defs>
+
+  <!-- ── Rounded-square app icon background ── -->
+  <rect x="16" y="16" width="480" height="480" rx="112" ry="112"
+        fill="url(#bgGrad)" filter="url(#iconShadow)"/>
+  <rect x="16" y="16" width="480" height="480" rx="112" ry="112"
+        fill="url(#sheen)"/>
+  <!-- 1px rim highlight -->
+  <rect x="17.5" y="17.5" width="477" height="477" rx="110.5" ry="110.5"
+        fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2.5"/>
+
+  <!--
+    ── G LETTERMARK ──
+    Center: (248, 245)   Outer R: 166   Inner r: 100   Gap: ±30° on right side
+
+    Outer arc endpoints (±30° from east):
+      top    (392, 162)  — 248+166·cos30°, 245−166·sin30°
+      bottom (392, 328)  — 248+166·cos30°, 245+166·sin30°
+
+    Outer path (clockwise winding overall):
+      M 392,162
+      A 166,166 0 1,0 392,328     (large CCW-screen arc going left around)
+      L 392,295 L 335,295          (crossbar bottom edge — inner bottom y)
+      L 335,245                    (crossbar left edge up to mid-height y=245)
+      L 392,245                    (crossbar top — the horizontal bar of the G)
+      Z                            (close back to 392,162)
+
+    Inner hole (evenodd punch — full circle, opposite winding):
+      M 348,245  A 100,100 0 1,0 148,245  A 100,100 0 1,0 348,245  Z
+      (two semicircles CW, punches out the full Ri=100 disk)
+  -->
+  <g filter="url(#letterShadow)">
+    <path
+      fill="url(#gGrad)"
+      fill-rule="evenodd"
+      d="
+        M 392,162
+        A 166,166 0 1,0 392,328
+        L 392,295
+        L 335,295
+        L 335,245
+        L 392,245
+        Z
+
+        M 348,245
+        A 100,100 0 1,0 148,245
+        A 100,100 0 1,0 348,245
+        Z
+      "
+    />
+  </g>
+
+  <!-- ── Notification dot accent (bottom-right) ── -->
+  <circle cx="374" cy="374" r="44" fill="url(#dotGrad)" filter="url(#dotGlow)"/>
+  <!-- Specular highlight on dot -->
+  <ellipse cx="361" cy="361" rx="12" ry="9"
+           fill="rgba(255,255,255,0.55)" transform="rotate(-35 361 361)"/>
+
+</svg>

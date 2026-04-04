@@ -17,6 +17,10 @@ export default function BoardPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [commentCounts, setCommentCounts] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   useEffect(() => {
     async function init() {
@@ -36,6 +40,7 @@ export default function BoardPage() {
         router.replace("/pending");
         return;
       }
+      setLoggedIn(true);
       loadPosts(1, "");
     }
     init();
@@ -48,6 +53,7 @@ export default function BoardPage() {
     let query = supabase
       .from("board_posts")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE);
 
@@ -55,11 +61,27 @@ export default function BoardPage() {
 
     const { data } = await query;
     const fetched = data ?? [];
-    if (append) setPosts((prev) => [...prev, ...fetched.slice(0, PAGE_SIZE)]);
-    else setPosts(fetched.slice(0, PAGE_SIZE));
+    const slice = fetched.slice(0, PAGE_SIZE);
+    if (append) setPosts((prev) => [...prev, ...slice]);
+    else setPosts(slice);
     setHasMore(fetched.length > PAGE_SIZE);
     setLoading(false);
     setLoadingMore(false);
+
+    // 댓글 수 fetch
+    const ids = slice.map((p) => p.id);
+    if (ids.length > 0) {
+      supabase
+        .from("board_comments")
+        .select("post_id")
+        .in("post_id", ids)
+        .then(({ data: cd }) => {
+          const map = new Map<string, number>();
+          for (const r of cd ?? [])
+            map.set(r.post_id, (map.get(r.post_id) ?? 0) + 1);
+          setCommentCounts((prev) => new Map([...prev, ...map]));
+        });
+    }
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -87,7 +109,7 @@ export default function BoardPage() {
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"
-          placeholder="검색"
+          placeholder="제목·내용 검색"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="input-base flex-1"
@@ -122,7 +144,7 @@ export default function BoardPage() {
           {search ? "검색 결과가 없습니다." : "아직 글이 없습니다."}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {posts.map((post) => {
             const date = new Date(post.created_at).toLocaleDateString("ko-KR", {
               month: "short",
@@ -130,7 +152,7 @@ export default function BoardPage() {
             });
             return (
               <Link key={post.id} href={`/board/${post.id}`} className="block">
-                <div className="card px-4 py-3 cursor-pointer space-y-1">
+                <div className="card px-4 py-2 cursor-pointer space-y-1">
                   <div className="flex items-start justify-between gap-2">
                     <p
                       className="text-sm font-medium leading-snug flex-1 min-w-0 truncate"
@@ -150,7 +172,7 @@ export default function BoardPage() {
                       className="text-xs"
                       style={{ color: "var(--muted-fg)" }}
                     >
-                      {post.author}
+                      {post.is_anonymous ? "익명" : post.author}
                     </span>
                     <span
                       className="text-xs"
@@ -158,6 +180,28 @@ export default function BoardPage() {
                     >
                       · 조회 {post.view_count ?? 0}
                     </span>
+                    {(commentCounts.get(post.id) ?? 0) > 0 && (
+                      <span
+                        className="text-xs inline-flex items-center gap-0.5"
+                        style={{ color: "var(--primary)" }}
+                      >
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 11 11"
+                          fill="none"
+                          aria-hidden
+                        >
+                          <path
+                            d="M1 1h9v7H6.5L5 9.5 3.5 8H1V1z"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {commentCounts.get(post.id)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -173,6 +217,32 @@ export default function BoardPage() {
             </button>
           )}
         </div>
+      )}
+      {loggedIn && (
+        <button
+          onClick={() => router.push("/post/new")}
+          className="fixed bottom-6 right-6 z-30 flex items-center gap-1.5 text-white text-sm font-semibold px-4 py-2.5 rounded-full"
+          style={{
+            background: "#6366f1",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          }}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M7.5 1v13M1 7.5h13"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+          글 올리기
+        </button>
       )}
     </div>
   );
