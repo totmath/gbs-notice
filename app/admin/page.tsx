@@ -8,8 +8,10 @@ import { supabase, Profile, Feedback } from "@/lib/supabase";
 export default function AdminPage() {
   const router = useRouter();
   const [tab, setTab] = useState<
-    "pending" | "members" | "feedback" | "content" | "posts"
+    "pending" | "members" | "feedback" | "content" | "posts" | "settings"
   >("pending");
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [savingAutoApprove, setSavingAutoApprove] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<Profile[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -78,11 +80,31 @@ export default function AdminPage() {
         loadFeedback(),
         loadAllPosts(),
         loadAllComments(),
+        loadSettings(),
       ]);
       setLoading(false);
     }
     init();
   }, [router]);
+
+  async function loadSettings() {
+    const { data } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "auto_approve")
+      .single();
+    if (data) setAutoApprove(data.value === "true");
+  }
+
+  async function saveAutoApprove(val: boolean) {
+    setSavingAutoApprove(true);
+    await supabase
+      .from("settings")
+      .update({ value: val ? "true" : "false" })
+      .eq("key", "auto_approve");
+    setAutoApprove(val);
+    setSavingAutoApprove(false);
+  }
 
   async function loadPending() {
     const { data } = await supabase
@@ -384,6 +406,7 @@ export default function AdminPage() {
             label: `글 목록${allPosts.length > 0 ? ` (${allPosts.length})` : ""}`,
           },
           { key: "content" as const, label: "콘텐츠" },
+          { key: "settings" as const, label: "설정" },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -1094,6 +1117,42 @@ export default function AdminPage() {
               </div>
             ))
           )}
+        </div>
+      )}
+      {/* 설정 */}
+      {tab === "settings" && (
+        <div className="space-y-4">
+          <div className="card px-4 py-4 flex items-center justify-between">
+            <div>
+              <p
+                className="text-sm font-medium"
+                style={{ color: "var(--foreground)" }}
+              >
+                자동 승인
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: "var(--muted-fg)" }}
+              >
+                켜면 가입 즉시 자동으로 승인됩니다
+              </p>
+            </div>
+            <button
+              onClick={() => saveAutoApprove(!autoApprove)}
+              disabled={savingAutoApprove}
+              className="relative w-11 h-6 rounded-full transition-colors"
+              style={{
+                background: autoApprove ? "#6366f1" : "var(--border-subtle)",
+              }}
+            >
+              <span
+                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+                style={{
+                  transform: autoApprove ? "translateX(20px)" : "translateX(0)",
+                }}
+              />
+            </button>
+          </div>
         </div>
       )}
     </div>

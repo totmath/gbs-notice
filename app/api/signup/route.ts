@@ -117,7 +117,14 @@ export async function POST(req: NextRequest) {
     grade: grade ?? null,
     class_num: class_num ?? null,
     email: username,
-    approved: true,
+    approved: await (async () => {
+      const { data } = await supabaseAdmin
+        .from("settings")
+        .select("value")
+        .eq("key", "auto_approve")
+        .single();
+      return data?.value === "true";
+    })(),
     can_post: true,
     can_view: true,
   });
