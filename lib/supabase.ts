@@ -44,6 +44,7 @@ export type BoardPost = {
   created_at: string;
   view_count: number;
   files: PostFile[];
+  is_anonymous?: boolean;
 };
 
 export type Comment = {
