@@ -48,13 +48,17 @@ export default function AccountPage() {
       setStudentId(profile.student_id ?? "");
       setUsername(profile.email);
       setUserId(user.id);
-      // 푸시 구독 상태 확인
-      if ("serviceWorker" in navigator && "PushManager" in window) {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        setPushSubscribed(!!sub);
-      }
       setLoading(false);
+      // 푸시 구독 상태 확인 (로딩과 별개로 처리)
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setPushSubscribed(!!sub);
+        } catch {
+          // 무시
+        }
+      }
     }
     load();
   }, [router]);
