@@ -61,6 +61,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (
+    grade !== null &&
+    grade !== undefined &&
+    ![1, 2, 3].includes(Number(grade))
+  ) {
+    return NextResponse.json(
+      { error: "올바른 학년을 선택해주세요." },
+      { status: 400 },
+    );
+  }
+  if (
+    class_num !== null &&
+    class_num !== undefined &&
+    ![1, 2, 3, 4, 5].includes(Number(class_num))
+  ) {
+    return NextResponse.json(
+      { error: "올바른 반을 선택해주세요." },
+      { status: 400 },
+    );
+  }
+
   const email = `${username}@gbs.school`;
 
   const supabaseAdmin = createClient(
