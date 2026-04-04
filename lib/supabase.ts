@@ -96,6 +96,8 @@ export type Profile = {
   name: string;
   email: string;
   student_id: string | null;
+  grade: number | null;
+  class_num: number | null;
   approved: boolean;
   is_admin: boolean;
   created_at: string;
