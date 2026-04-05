@@ -87,14 +87,19 @@ export default function SignupPage() {
             required
             className="input-base"
           />
-          <input
-            type="text"
-            placeholder="학번"
+          <select
             value={studentId}
-            onChange={(e) => setStudentId(e.target.value.replace(/\s/g, ""))}
+            onChange={(e) => setStudentId(e.target.value)}
             required
             className="input-base"
-          />
+          >
+            <option value="">학번</option>
+            {Array.from({ length: 21 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={String(n)}>
+                {n}번
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <select
               value={grade}
