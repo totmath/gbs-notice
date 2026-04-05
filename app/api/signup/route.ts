@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { username, password, name, grade, class_num } = await req.json();
+  const { username, password, name, student_id, grade, class_num } =
+    await req.json();
 
   if (!username || !/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
     return NextResponse.json(
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
   const { error: profileError } = await supabaseAdmin.from("profiles").insert({
     id: created.user.id,
     name: name.trim(),
-    student_id: null,
+    student_id: student_id ?? null,
     grade: grade ?? null,
     class_num: class_num ?? null,
     email: username,

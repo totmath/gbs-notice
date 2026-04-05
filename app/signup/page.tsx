@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [grade, setGrade] = useState("");
   const [classNum, setClassNum] = useState("");
   const [username, setUsername] = useState("");
@@ -34,6 +35,7 @@ export default function SignupPage() {
         username: username.trim(),
         password,
         name: name.trim(),
+        student_id: studentId.trim() || null,
         grade: grade ? Number(grade) : null,
         class_num: classNum ? Number(classNum) : null,
       }),
@@ -82,6 +84,14 @@ export default function SignupPage() {
             placeholder="이름"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
+            className="input-base"
+          />
+          <input
+            type="text"
+            placeholder="학번"
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value.replace(/\s/g, ""))}
             required
             className="input-base"
           />
