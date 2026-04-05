@@ -51,6 +51,7 @@ type GroupBoxProps = {
   editingId: string | null;
   onStartEdit: (post: FeedItem) => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string, pinned: boolean) => void;
   onEdit: (id: string) => void;
   editTitle: string;
   setEditTitle: (v: string) => void;
@@ -82,6 +83,7 @@ function GroupBox({
   editingId,
   onStartEdit,
   onDelete,
+  onTogglePin,
   onEdit,
   editTitle,
   setEditTitle,
@@ -237,6 +239,22 @@ function GroupBox({
                 />
                 {isAdmin && post._source === "notice" && (
                   <div className="absolute top-3 right-3 flex gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onTogglePin(post.id, post.pinned ?? false);
+                      }}
+                      className="text-xs px-2 py-0.5 rounded-sm font-medium"
+                      style={{
+                        color: post.pinned ? "#f59e0b" : "var(--muted-fg)",
+                        background: post.pinned
+                          ? "rgba(245,158,11,0.1)"
+                          : "var(--surface)",
+                        border: `1px solid ${post.pinned ? "rgba(245,158,11,0.3)" : "var(--border-subtle)"}`,
+                      }}
+                    >
+                      📌
+                    </button>
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -661,6 +679,11 @@ function Feed() {
     setEditExistingFiles(post.files ?? []);
   }
 
+  async function handleTogglePin(id: string, pinned: boolean) {
+    await supabase.from("posts").update({ pinned: !pinned }).eq("id", id);
+    loadPosts(1, search);
+  }
+
   async function handleEdit(id: string) {
     const { files: newFiles } = await uploadFiles(editFiles);
     const allFiles = [...editExistingFiles, ...newFiles];
@@ -892,6 +915,27 @@ function Feed() {
                                   <button
                                     onClick={(e) => {
                                       e.preventDefault();
+                                      handleTogglePin(
+                                        post.id,
+                                        post.pinned ?? false,
+                                      );
+                                    }}
+                                    className="text-xs px-2 py-0.5 rounded-sm font-medium"
+                                    style={{
+                                      color: post.pinned
+                                        ? "#f59e0b"
+                                        : "var(--muted-fg)",
+                                      background: post.pinned
+                                        ? "rgba(245,158,11,0.1)"
+                                        : "var(--surface)",
+                                      border: `1px solid ${post.pinned ? "rgba(245,158,11,0.3)" : "var(--border-subtle)"}`,
+                                    }}
+                                  >
+                                    📌
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
                                       startEdit(post);
                                     }}
                                     className="text-xs px-2 py-0.5 rounded-sm font-medium"
@@ -1061,8 +1105,24 @@ function Feed() {
                       post._source === "board" || readNoticeIds.has(post.id)
                     }
                   />
-                  {isAdmin && (
+                  {isAdmin && post._source === "notice" && (
                     <div className="absolute top-3 right-3 flex gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleTogglePin(post.id, post.pinned ?? false);
+                        }}
+                        className="text-xs px-2 py-0.5 rounded-sm font-medium"
+                        style={{
+                          color: post.pinned ? "#f59e0b" : "var(--muted-fg)",
+                          background: post.pinned
+                            ? "rgba(245,158,11,0.1)"
+                            : "var(--surface)",
+                          border: `1px solid ${post.pinned ? "rgba(245,158,11,0.3)" : "var(--border-subtle)"}`,
+                        }}
+                      >
+                        📌
+                      </button>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
