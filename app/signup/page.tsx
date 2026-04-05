@@ -85,7 +85,7 @@ export default function SignupPage() {
           />
           <input
             type="text"
-            placeholder="학번 (예: 1111)"
+            placeholder="학번"
             value={studentId}
             onChange={(e) => setStudentId(e.target.value.replace(/\s/g, ""))}
             required
